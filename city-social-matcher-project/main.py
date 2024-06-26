@@ -1,0 +1,3 @@
+import maingui
+
+maingui.createMainWindow()
