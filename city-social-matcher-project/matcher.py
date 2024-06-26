@@ -54,13 +54,14 @@ def getMatches():
             responsesDict[male.getName() + " + " + female.getName()] = str(getCompatibilityPercentage(male, female)) + "%"
 
     sorted_responsesDict = dict( sorted(responsesDict.items(), key=operator.itemgetter(1), reverse=True)) # reverse=True sorts in descending
-    print(sorted_responsesDict)
+    # print(sorted_responsesDict)
     return sorted_responsesDict
 
 
 def getSubmissions(formId):
     responses = jotform_api.JotformAPI.getResponses(formId)
     # print(responses)
+    return responses
 
 
 # --- sample input ---

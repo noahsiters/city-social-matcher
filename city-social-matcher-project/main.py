@@ -1,3 +1,4 @@
 import maingui
 
-maingui.createMainWindow()
+# maingui.createMainWindow()
+maingui.createMainWindow2()

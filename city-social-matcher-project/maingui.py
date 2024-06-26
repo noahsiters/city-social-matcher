@@ -1,9 +1,12 @@
 from tkinter import *
 from tkinter import ttk
 
-import customtkinter
+import customtkinter # type: ignore
 import matcher
 import settings
+
+customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
+customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 root = Tk()
 
@@ -52,30 +55,89 @@ def openSettingsWindow(*args):
     # Toplevel object which will 
     # be treated as a new window
     settingsWindow = Toplevel(root)
- 
-    # sets the title of the
-    # Toplevel widget
-    settingsWindow.title("Settings")
- 
-    # # sets the geometry of toplevel
-    # settingsWindow.geometry("300x300")
 
-    # set up content frame
-    # settingsFrame = ttk.Frame(root, padding="6 6 12 12")
-    # settingsFrame.grid(column=0, row=0, sticky=(N, S, E, W))
-    # root.columnconfigure(0, weight=1)
-    # root.rowconfigure(0, weight=1)
- 
-    # A Label widget to show in toplevel
-    # Label(settingsWindow, 
-    #       text ="This is a new window").pack()
+    settingsWindow.title("Settings")
+    appWidth, appHeight = 420, 300
+    settingsWindow.geometry(f"{appWidth}x{appHeight}")
+
+    # apikey label
+    settingsWindow.apikeyLabel = customtkinter.CTkLabel(settingsWindow, text="Jotform API Key")
+    settingsWindow.apikeyLabel.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+
+    # apikey entry
+    apikey = StringVar()
+    settingsWindow.apikeyEntry = customtkinter.CTkEntry(settingsWindow, placeholder_text=lambda: settings.getAPIKey(), textvariable=apikey)
+    settingsWindow.apikeyEntry.grid(row=0, column=1, columnspan=2, padx=10, pady=10, sticky="w")
+
+    # update apikey button
+    settingsWindow.apikeyUpdateButton = customtkinter.CTkButton(settingsWindow, text="Update", command=lambda: settings.updateAPIKey(apikey.get()))
+    settingsWindow.apikeyUpdateButton.grid(row=0, column=3, padx=10, pady=10, sticky="ew")
 
     for child in settingsWindow.winfo_children():
         child.grid_configure(padx=5, pady=5)
     
-    apikey = StringVar()
-    apikey_entry = ttk.Entry(settingsWindow, width=20, textvariable=apikey)
-    apikey_entry.grid(column=1, row=1, sticky=(W, E))
-    ttk.Button(settingsWindow, text="Update API Key", command=lambda: settings.updateAPIKey(apikey.get())).grid(column=3, row=1, sticky=W)
-
 # createMainWindow()
+
+def createMainWindow2():
+    root.title("City Social Matcher")
+    appWidth, appHeight = 500, 400
+    root.geometry(f"{appWidth}x{appHeight}")
+
+    # formId label
+    root.formIdLabel = customtkinter.CTkLabel(root, text="Jotform Form ID: ")
+    root.formIdLabel.grid(row=0, column=0, padx=20, pady=20, sticky="ew")
+
+    # formId entry
+    formid = StringVar()
+    formIdEntry = customtkinter.CTkEntry(root, placeholder_text="4872837462", width=220, textvariable=formid)
+    formIdEntry.grid(row=0, column=1, columnspan=3, padx=20, pady=20, sticky="w")
+
+    # results text box
+    resultsTextBox = customtkinter.CTkTextbox(root, width=340)
+    resultsTextBox.grid(row=1, column=0, rowspan=3, columnspan=3, padx=20, pady=20, sticky="w")
+    resultsTextBox.configure(state="disabled")
+
+    # form info text box
+    formInfoTextBox = customtkinter.CTkTextbox(root, width=340, height=130)
+    formInfoTextBox.grid(row=4, column=0, columnspan=3, padx=20, pady=20, sticky="ew")
+    formInfoTextBox.configure(state="disabled")
+    
+    # create paramters for methods to access
+    parameters = [formid, resultsTextBox, formInfoTextBox]
+
+    # process button
+    root.submitButton = customtkinter.CTkButton(root, text="Submit", command=lambda: processButton_Clicked(parameters))
+    root.submitButton.grid(row=0, column=4, padx=20, pady=20, sticky="ew")
+
+    # settings button
+    root.settingsButton = customtkinter.CTkButton(root, text="Settings", fg_color="darkgray", text_color="black", hover_color="gray", command=openSettingsWindow)
+    root.settingsButton.grid(row=1, column=4, padx=20, pady=20, sticky="n")
+
+    # connect to jotform button
+    root.getSubmissions = customtkinter.CTkButton(root, text="Get Submissions", command=lambda: getSubmissionsButton_Clicked(parameters))
+    root.getSubmissions.grid(row=2, column=4, padx=20, pady=20, sticky="n")
+
+    # help button
+    root.helpButton = customtkinter.CTkButton(root, text="Help", fg_color="darkgray", text_color="black", hover_color="gray")
+    root.helpButton.grid(row=4, column=4, padx=20, pady=20, sticky="s")
+
+    for child in root.winfo_children():
+        child.grid_configure(padx=5, pady=5)
+
+    root.mainloop()
+
+def processButton_Clicked(parameters):
+    textbox = parameters[1]
+    textbox.configure(state="normal")
+    matches = matcher.getMatches()
+    print(matches)
+    textbox.insert("insert", matches)
+    textbox.configure(state="disabled")
+
+def getSubmissionsButton_Clicked(parameters):
+    textbox = parameters[2]
+    formid = parameters[0].get()
+    textbox.configure(state="normal")
+    submissions = matcher.getSubmissions(formid)
+    textbox.insert("insert", submissions)
+    textbox.configure(state="disabled")

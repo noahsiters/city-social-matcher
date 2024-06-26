@@ -1,9 +1,10 @@
 import json
 import os
-import dotenv
+import dotenv # type: ignore
 
-from jotform import JotformAPIClient
+from jotform import JotformAPIClient # type: ignore
 
+# TODO decouple get responses and just have this grab the submissions and return
 class JotformAPI:
     def getResponses(formId):
         dotenv.load_dotenv()
