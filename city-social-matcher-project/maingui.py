@@ -128,8 +128,9 @@ def createMainWindow2():
 
 def processButton_Clicked(parameters):
     textbox = parameters[1]
+    formid = parameters[0].get()
     textbox.configure(state="normal")
-    matches = matcher.getMatches()
+    matches = matcher.getMatches(formid)
     print(matches)
     textbox.insert("insert", matches)
     textbox.configure(state="disabled")
@@ -138,6 +139,6 @@ def getSubmissionsButton_Clicked(parameters):
     textbox = parameters[2]
     formid = parameters[0].get()
     textbox.configure(state="normal")
-    submissions = matcher.getSubmissions(formid)
+    submissions = matcher.getDataFromSubmissions(formid)
     textbox.insert("insert", submissions)
     textbox.configure(state="disabled")

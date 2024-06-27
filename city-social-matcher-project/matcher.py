@@ -1,25 +1,7 @@
 import operator
 import jotform_api
-
-# define Person class, this will be used for each responder to the form
-class Person:
-    def __init__(self, name, responses, phone, email):
-        self.name = name
-        self.responses = responses
-        self.phone = phone
-        self.email = email
-
-    def getName(self):
-        return self.name
-    
-    def getResponses(self):
-        return self.responses
-    
-    def getPhone(self):
-        return self.phone
-    
-    def getEmail(self):
-        return self.email
+import json
+import submission
     
 # define methods
 # this method will combine each persons answers to see how similar they are, and give it a percentage of similarity
@@ -43,43 +25,104 @@ def getCompatibilityPercentage(male, female):
             percentages.append(0)
         k += 1
 
-    return (sum(percentages) / len(percentages)) * 100 # get the average percentage and move it one decimal
+    return round((sum(percentages) / len(percentages)) * 100) # get the average percentage and move it one decimal
 
 # this method will get all of the combinations and organize them in a single dictionary, then sort in descending order
-def getMatches():
+def getMatches(formid):
+    parsedSubmissions = getDataFromSubmissions(formid)
+
+    males = []
+    females = []
+
+    responsesDict = { }
+
+    # sort each submission into male and female lists
+    for parsedSub in parsedSubmissions:
+        if parsedSub.getGender() == "male":
+            males.append(parsedSub)
+        elif parsedSub.getGender() == "female":
+            females.append(parsedSub)
+        
     # adding combinations and scores to dictionary
-    i = 0
     for female in females:
         for male in males:
-            responsesDict[male.getName() + " + " + female.getName()] = str(getCompatibilityPercentage(male, female)) + "%"
+            responsesDict[male.getFullName() + " + " + female.getFullName()] = str(getCompatibilityPercentage(male, female)) + "%"
 
     sorted_responsesDict = dict( sorted(responsesDict.items(), key=operator.itemgetter(1), reverse=True)) # reverse=True sorts in descending
-    # print(sorted_responsesDict)
-    return sorted_responsesDict
 
+    responseStr = "MATCHES:\n"
+    for key in sorted_responsesDict:
+        responseStr += key + " : " + sorted_responsesDict[key] + "\n"
 
-def getSubmissions(formId):
-    responses = jotform_api.JotformAPI.getResponses(formId)
-    # print(responses)
-    return responses
+    return responseStr
+
+# gets submissions from json API class
+def getDataFromSubmissions(formId):
+    submissions = jotform_api.JotformAPI.getFormSubmissions(formId)
+
+    parsedSubmissions = []
+
+    for sub in submissions:
+        json_object = json.dumps(sub, indent=2) # converts to json and makes it pretty
+        sub_json = json.loads(json_object) # makes json parsable
+
+        # submission data
+        firstName = ""
+        lastName = ""
+        email = ""
+        age = ""
+        gender = ""
+        responses = []
+        creationDate = sub_json["created_at"]
+        for answer in sub_json["answers"]:
+
+            # checks if answer is of type "control_matrix" (table that contains answers)
+            if sub_json["answers"][answer]["type"] == "control_matrix":
+                for key in sub_json["answers"][answer]["answer"]:
+                    resp = sub_json["answers"][answer]["answer"][key]
+                    if resp == "Strongly Disagree":
+                        responses.append(0)
+                    elif resp == "Disagree":
+                        responses.append(1)
+                    elif resp == "Neither":
+                        responses.append(2)
+                    elif resp == "Agree":
+                        responses.append(3)
+                    elif resp == "Strongly Agree":
+                        responses.append(4)
+            # check if answer is personal info
+            elif sub_json["answers"][answer]["name"] == "firstName":
+                firstName = sub_json["answers"][answer]["answer"]
+            elif sub_json["answers"][answer]["name"] == "lastName":
+                lastName = sub_json["answers"][answer]["answer"]
+            elif sub_json["answers"][answer]["name"] == "email":
+                email = sub_json["answers"][answer]["answer"]
+            elif sub_json["answers"][answer]["name"] == "age":
+                age = sub_json["answers"][answer]["answer"]
+            elif sub_json["answers"][answer]["name"] == "gender":
+                gender = sub_json["answers"][answer]["answer"]
+        
+        parsedSubmissions.append(submission.Submission(firstName, lastName, email, age, gender, responses, creationDate))
+
+    return parsedSubmissions
 
 
 # --- sample input ---
-responses = [0, 1, 2, 3, 4]
+# responses = [0, 1, 2, 3, 4]
 
-responsesDict = {
+# responsesDict = {
 
-}
+# }
 
-pAdam = Person("Adam", [responses[0], responses[4], responses[2], responses[2], responses[3]], 4405552222, "adamanderson@test.com")
-pBill = Person("Bill", [responses[2], responses[2], responses[1], responses[3], responses[4]], 4405551234, "billwilly@test.com")
-pCarl = Person("Carl", [responses[0], responses[4], responses[2], responses[2], responses[3]], 4405554321, "carlcarter@test.com")
-pDan = Person("Dan", [responses[1], responses[2], responses[3], responses[3], responses[1]], 4405555543, "dandonaldson@test.com")
+# pAdam = Person("Adam", [responses[0], responses[4], responses[2], responses[2], responses[3]], 4405552222, "adamanderson@test.com")
+# pBill = Person("Bill", [responses[2], responses[2], responses[1], responses[3], responses[4]], 4405551234, "billwilly@test.com")
+# pCarl = Person("Carl", [responses[0], responses[4], responses[2], responses[2], responses[3]], 4405554321, "carlcarter@test.com")
+# pDan = Person("Dan", [responses[1], responses[2], responses[3], responses[3], responses[1]], 4405555543, "dandonaldson@test.com")
 
-pAlly = Person("Ally", [responses[4], responses[3], responses[3], responses[0], responses[2]], 4405552814, "allyarlington@test.com")
-pBeth = Person("Beth", [responses[2], responses[2], responses[3], responses[3], responses[1]], 4405558053, "bethbarry@test.com")
-pCait = Person("Cait", [responses[0], responses[2], responses[1], responses[1], responses[2]], 4405550932, "caitcarrington@test.com")
-pDina = Person("Dina", [responses[2], responses[3], responses[2], responses[2], responses[0]], 4405559021, "dinadomino@test.com")
+# pAlly = Person("Ally", [responses[4], responses[3], responses[3], responses[0], responses[2]], 4405552814, "allyarlington@test.com")
+# pBeth = Person("Beth", [responses[2], responses[2], responses[3], responses[3], responses[1]], 4405558053, "bethbarry@test.com")
+# pCait = Person("Cait", [responses[0], responses[2], responses[1], responses[1], responses[2]], 4405550932, "caitcarrington@test.com")
+# pDina = Person("Dina", [responses[2], responses[3], responses[2], responses[2], responses[0]], 4405559021, "dinadomino@test.com")
 
-males = [pAdam, pBill, pCarl, pDan]
-females = [pAlly, pBeth, pCait, pDina]
+# males = [pAdam, pBill, pCarl, pDan]
+# females = [pAlly, pBeth, pCait, pDina]

@@ -1,33 +1,12 @@
-import json
 import os
 import dotenv # type: ignore
 
 from jotform import JotformAPIClient # type: ignore
 
-# TODO decouple get responses and just have this grab the submissions and return
 class JotformAPI:
-    def getResponses(formId):
+    def getFormSubmissions(formId):
         dotenv.load_dotenv()
+
         jotformAPIClient = JotformAPIClient(os.getenv("API_KEY"))
-        print(os.getenv("API_KEY"))
 
-        submissions = jotformAPIClient.get_form_submissions(formId)
-
-        quizResponsesDict = {
-
-        }
-
-        for submission in submissions:
-            json_object = json.dumps(submission, indent=2)
-            submission_json = json.loads(json_object)
-
-            for answer in submission_json["answers"]:
-                if "quiz" in submission_json["answers"][answer]["name"]:
-                    quizResponsesDict[submission_json["answers"][answer]["text"]] = submission_json["answers"][answer]["answer"] # stuffs value from "answer" item into dict
-
-        responseString = ""
-        for key in quizResponsesDict:
-            responseString += key + " : " + quizResponsesDict[key] + "\n"
-
-        print(responseString)
-        return responseString
+        return jotformAPIClient.get_form_submissions(formId)
