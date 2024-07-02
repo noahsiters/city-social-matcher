@@ -10,3 +10,10 @@ class JotformAPI:
         jotformAPIClient = JotformAPIClient(os.getenv("API_KEY"))
 
         return jotformAPIClient.get_form_submissions(formId)
+    
+    def getUserForms():
+        dotenv.load_dotenv()
+
+        jotformAPIClient = JotformAPIClient(os.getenv("API_KEY"))
+
+        return jotformAPIClient.get_forms()

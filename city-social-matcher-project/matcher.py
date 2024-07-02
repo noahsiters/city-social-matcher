@@ -106,6 +106,49 @@ def getDataFromSubmissions(formId):
 
     return parsedSubmissions
 
+def getListOfUserForms():
+    forms = jotform_api.JotformAPI.getUserForms()
+
+    parsedForms = {
+
+    }
+
+    for form in forms:
+        json_object = json.dumps(form, indent=2)
+        form_json = json.loads(json_object)
+
+        # form data
+        formTitle = form_json["title"]
+        formId = form_json["id"]
+        status = form_json["status"]
+
+        if status == "ENABLED":
+            parsedForms[formId] = formTitle
+
+    # print(parsedForms)
+    return list(parsedForms.values())
+
+def getFormIdBasedOnFormTitle(arg):
+    forms = jotform_api.JotformAPI.getUserForms()
+
+    parsedForms = {
+
+    }
+
+    for form in forms:
+        json_object = json.dumps(form, indent=2)
+        form_json = json.loads(json_object)
+
+        # form data
+        formTitle = form_json["title"]
+        formId = form_json["id"]
+        status = form_json["status"]
+
+        if status == "ENABLED":
+            parsedForms[formId] = formTitle
+
+    return list(parsedForms.keys())[list(parsedForms.values()).index(arg)]
+
 
 # --- sample input ---
 # responses = [0, 1, 2, 3, 4]

@@ -80,8 +80,9 @@ def openSettingsWindow(*args):
 
 def createMainWindow2():
     root.title("City Social Matcher")
-    appWidth, appHeight = 500, 400
+    appWidth, appHeight = 680, 500
     root.geometry(f"{appWidth}x{appHeight}")
+    root.resizable(False,False)
 
     # formId label
     root.formIdLabel = customtkinter.CTkLabel(root, text="Jotform Form ID: ")
@@ -89,37 +90,44 @@ def createMainWindow2():
 
     # formId entry
     formid = StringVar()
-    formIdEntry = customtkinter.CTkEntry(root, placeholder_text="4872837462", width=220, textvariable=formid)
-    formIdEntry.grid(row=0, column=1, columnspan=3, padx=20, pady=20, sticky="w")
+    # formIdEntry = customtkinter.CTkEntry(root, placeholder_text="4872837462", width=220, textvariable=formid)
+    # formIdEntry.grid(row=0, column=1, columnspan=3, padx=20, pady=20, sticky="w")
+
+    # form selection combo box
+    values = matcher.getListOfUserForms()
+    formId_comboBox = customtkinter.CTkComboBox(root, values=values, width=400, state="readonly")
+    formId_comboBox.grid(row=0, column=1, columnspan=3, padx=20, pady=20, sticky="ew")
 
     # results text box
-    resultsTextBox = customtkinter.CTkTextbox(root, width=340)
+    resultsTextBox = customtkinter.CTkTextbox(root, width=520, height=280)
     resultsTextBox.grid(row=1, column=0, rowspan=3, columnspan=3, padx=20, pady=20, sticky="w")
     resultsTextBox.configure(state="disabled")
 
     # form info text box
-    formInfoTextBox = customtkinter.CTkTextbox(root, width=340, height=130)
+    formInfoTextBox = customtkinter.CTkTextbox(root, width=520, height=150)
     formInfoTextBox.grid(row=4, column=0, columnspan=3, padx=20, pady=20, sticky="ew")
     formInfoTextBox.configure(state="disabled")
     
     # create paramters for methods to access
-    parameters = [formid, resultsTextBox, formInfoTextBox]
+    parameters = [formId_comboBox, resultsTextBox, formInfoTextBox]
 
     # process button
     root.submitButton = customtkinter.CTkButton(root, text="Submit", command=lambda: processButton_Clicked(parameters))
-    root.submitButton.grid(row=0, column=4, padx=20, pady=20, sticky="ew")
+    root.submitButton.grid(row=0, column=4, padx=20, pady=20, sticky="s")
 
     # settings button
     root.settingsButton = customtkinter.CTkButton(root, text="Settings", fg_color="darkgray", text_color="black", hover_color="gray", command=openSettingsWindow)
     root.settingsButton.grid(row=1, column=4, padx=20, pady=20, sticky="n")
 
-    # connect to jotform button
-    root.getSubmissions = customtkinter.CTkButton(root, text="Get Submissions", command=lambda: getSubmissionsButton_Clicked(parameters))
-    root.getSubmissions.grid(row=2, column=4, padx=20, pady=20, sticky="n")
+    # # connect to jotform button
+    # root.getSubmissions = customtkinter.CTkButton(root, text="Get Submissions", command=lambda: getSubmissionsButton_Clicked(parameters))
+    # root.getSubmissions.grid(row=2, column=4, padx=20, pady=20, sticky="n")
 
     # help button
     root.helpButton = customtkinter.CTkButton(root, text="Help", fg_color="darkgray", text_color="black", hover_color="gray")
     root.helpButton.grid(row=4, column=4, padx=20, pady=20, sticky="s")
+
+    formId_comboBox.focus()
 
     for child in root.winfo_children():
         child.grid_configure(padx=5, pady=5)
@@ -128,17 +136,19 @@ def createMainWindow2():
 
 def processButton_Clicked(parameters):
     textbox = parameters[1]
-    formid = parameters[0].get()
+    # formid = parameters[0].get()
     textbox.configure(state="normal")
+    comboBox = parameters[0]
+    formid = matcher.getFormIdBasedOnFormTitle(comboBox.get())
     matches = matcher.getMatches(formid)
     print(matches)
     textbox.insert("insert", matches)
     textbox.configure(state="disabled")
 
-def getSubmissionsButton_Clicked(parameters):
-    textbox = parameters[2]
-    formid = parameters[0].get()
-    textbox.configure(state="normal")
-    submissions = matcher.getDataFromSubmissions(formid)
-    textbox.insert("insert", submissions)
-    textbox.configure(state="disabled")
+# def getSubmissionsButton_Clicked(parameters):
+#     textbox = parameters[2]
+#     formid = parameters[0].get()
+#     textbox.configure(state="normal")
+#     submissions = matcher.getDataFromSubmissions(formid)
+#     textbox.insert("insert", submissions)
+#     textbox.configure(state="disabled")
