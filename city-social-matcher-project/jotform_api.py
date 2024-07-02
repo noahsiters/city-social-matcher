@@ -17,3 +17,12 @@ class JotformAPI:
         jotformAPIClient = JotformAPIClient(os.getenv("API_KEY"))
 
         return jotformAPIClient.get_forms()
+    
+    def getUser(apikey):
+        jotformAPIClient = JotformAPIClient(apikey)
+
+        try:
+            user = jotformAPIClient.get_user()
+            return user
+        except:
+            return False
