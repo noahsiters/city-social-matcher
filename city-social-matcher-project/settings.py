@@ -14,8 +14,9 @@ def updateAPIKey(apikey):
             dotenv.load_dotenv(dotenv_file)
             os.environ["API_KEY"] = apikey
             dotenv.set_key(dotenv_file, "API_KEY", os.environ["API_KEY"])
+        return True
     else:
-        print("New API Key cannot be blank.")
+        return False
 
 def getAPIKey():
     dotenv_file = dotenv.find_dotenv()
@@ -40,4 +41,4 @@ def checkCurrentUser():
     if user == False:
         return False
     else:
-        return True
+        return user

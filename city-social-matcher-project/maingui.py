@@ -16,22 +16,22 @@ def openSettingsWindow(*args):
     settingsWindow = Toplevel(root)
 
     settingsWindow.title("Settings")
-    appWidth, appHeight = 420, 300
+    appWidth, appHeight = 480, 200
     settingsWindow.geometry(f"{appWidth}x{appHeight}")
 
     # apikey label
-    settingsWindow.apikeyLabel = customtkinter.CTkLabel(settingsWindow, text="Jotform API Key")
+    settingsWindow.apikeyLabel = customtkinter.CTkLabel(settingsWindow, text="Jotform API Key", width=40)
     settingsWindow.apikeyLabel.grid(row=0, column=0, padx=10, pady=10, sticky="w")
 
     # results label
     settingsWindow.resultsLabel = customtkinter.CTkLabel(settingsWindow, text="")
-    settingsWindow.resultsLabel.grid(row=1, column=1, padx=0, pady=0, sticky="nw")
+    settingsWindow.resultsLabel.grid(row=1, column=0, padx=0, pady=0, sticky="w", columnspan=2)
 
     # apikey entry
     apikey = StringVar()
     currentKey = settings.getAPIKey()
     print(currentKey)
-    settingsWindow.apikeyEntry = customtkinter.CTkEntry(settingsWindow, placeholder_text="test", textvariable=apikey)
+    settingsWindow.apikeyEntry = customtkinter.CTkEntry(settingsWindow, placeholder_text="test", textvariable=apikey, width=200)
     settingsWindow.apikeyEntry.grid(row=0, column=1, columnspan=2, padx=10, pady=10, sticky="w")
 
     # update apikey button
@@ -44,8 +44,7 @@ def openSettingsWindow(*args):
 
 def createMainWindow():
     currentUser = settings.checkCurrentUser()
-    print(currentUser)
-
+    
     root.title("City Social Matcher")
     appWidth, appHeight = 680, 500
     root.geometry(f"{appWidth}x{appHeight}")
@@ -56,7 +55,7 @@ def createMainWindow():
     root.formIdLabel.grid(row=0, column=0, padx=20, pady=20, sticky="ew")
 
     # form selection combo box
-    if currentUser == True:
+    if currentUser != False:
         values = matcher.getListOfUserForms()
         formId_comboBox = customtkinter.CTkComboBox(root, values=values, width=400, state="readonly")
     else:
@@ -73,10 +72,10 @@ def createMainWindow():
     statusInfoTextBox.grid(row=4, column=0, columnspan=3, padx=20, pady=20, sticky="ew")
     statusInfoTextBox.configure(state="disabled")
 
-    if currentUser == True:
-        updateStatusBox(statusInfoTextBox, "User found!")
+    if currentUser != False:
+        updateStatusBox(statusInfoTextBox, "User found! (" + currentUser["username"] + ")")
     else:
-        updateStatusBox(statusInfoTextBox, "No user found for API key!")
+        updateStatusBox(statusInfoTextBox, "No account found for API key!\nPlease go to settings and enter a new API key.")
     
     # create paramters for methods to access
     parameters = [formId_comboBox, resultsTextBox, statusInfoTextBox]
@@ -119,5 +118,8 @@ def processButton_Clicked(parameters):
 
 def updateButton_Clicked(apikey, label):
     print(apikey)
-    settings.updateAPIKey(apikey)
-    label.configure(text="API Key Updated!")
+    updatedBool = settings.updateAPIKey(apikey)
+    if updatedBool == True:
+        label.configure(text="API Key Updated! Please restart application.")
+    else:
+        label.configure(text="API Key field cannot be blank!")
