@@ -100,21 +100,26 @@ def createMainWindow():
     root.mainloop()
 
 def updateStatusBox(statusBox, message):
+    # clearTextBox(statusBox)
     statusBox.configure(state="normal")
     statusBox.insert("insert", message + "\n")
     statusBox.configure(state="disabled")
 
 # click events
 def processButton_Clicked(parameters):
+    comboBox = parameters[0]
     textbox = parameters[1]
+    statusBox = parameters[2]
+    clearTextBox(textbox)
     # formid = parameters[0].get()
     textbox.configure(state="normal")
-    comboBox = parameters[0]
+    updateStatusBox(statusBox, "Processing submisisons from: " + comboBox.get())
     formid = matcher.getFormIdBasedOnFormTitle(comboBox.get())
     matches = matcher.getMatches(formid)
     print(matches)
     textbox.insert("insert", matches)
     textbox.configure(state="disabled")
+    updateStatusBox(statusBox, "Matches retrieved!")
 
 def updateButton_Clicked(apikey, label):
     print(apikey)
@@ -123,3 +128,8 @@ def updateButton_Clicked(apikey, label):
         label.configure(text="API Key Updated! Please restart application.")
     else:
         label.configure(text="API Key field cannot be blank!")
+
+def clearTextBox(textbox):
+    textbox.configure(state="normal")
+    textbox.delete('1.0', END)
+    textbox.configure(state="disabled")
