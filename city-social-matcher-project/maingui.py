@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import ttk
+from datetime import datetime
 
 import customtkinter # type: ignore
 import matcher
@@ -101,8 +102,10 @@ def createMainWindow():
 
 def updateStatusBox(statusBox, message):
     # clearTextBox(statusBox)
+    dt_string = datetime.now().strftime("%H:%M:%S") # mm/dd/YY H:M:S
+
     statusBox.configure(state="normal")
-    statusBox.insert("insert", message + "\n")
+    statusBox.insert("insert", "(" + dt_string + ") " + message + "\n")
     statusBox.configure(state="disabled")
 
 # click events
@@ -113,7 +116,7 @@ def processButton_Clicked(parameters):
     clearTextBox(textbox)
     # formid = parameters[0].get()
     textbox.configure(state="normal")
-    updateStatusBox(statusBox, "Processing submisisons from: " + comboBox.get())
+    # updateStatusBox(statusBox, "Processing submisisons from: " + comboBox.get())
     formid = matcher.getFormIdBasedOnFormTitle(comboBox.get())
     matches = matcher.getMatches(formid)
     print(matches)

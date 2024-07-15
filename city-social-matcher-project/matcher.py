@@ -6,6 +6,8 @@ import paired_submission
     
 # define methods
 # this method will combine each persons answers to see how similar they are, and give it a percentage of similarity
+# TODO put in a swapper to make sure we get the best possible list of matches (maybe compare matches with other matches to see which is better)
+# TODO or try stable marriage problem with gale shapely algorithm
 def getCompatibilityPercentage(male, female):
     maleResp = male.getResponses()
     femaleResp = female.getResponses()
@@ -29,7 +31,7 @@ def getCompatibilityPercentage(male, female):
     for keyM in maleResp:
         for keyF in femaleResp:
             if keyM == keyF: # only comparing IF the question is the same
-                print(keyM + " : " + keyF)
+                # print(keyM + " : " + keyF)
                 if maleResp[keyM] == femaleResp[keyF]: # if exact
                     percentages.append(1)
                 elif abs(maleResp[keyM] - femaleResp[keyF]) == 1: # if 1 away
@@ -45,7 +47,11 @@ def getCompatibilityPercentage(male, female):
 
 # this method will get all of the combinations and organize them in a single dictionary, then sort in descending order
 def getMatches(formid):
-    parsedSubmissions = getDataFromSubmissions(formid)
+    parsedSubmissions = parseDataFromSubmissions(formid)
+
+    # for parsedSub in parsedSubmissions:
+    #     print(parsedSub.getFullName())
+    #     print(parsedSub.getGender())
 
     males = []
     females = []
@@ -54,9 +60,9 @@ def getMatches(formid):
 
     # sort each submission into male and female lists
     for parsedSub in parsedSubmissions:
-        if parsedSub.getGender() == "male":
+        if parsedSub.getGender() == "Male":
             males.append(parsedSub)
-        elif parsedSub.getGender() == "female":
+        elif parsedSub.getGender() == "Female":
             females.append(parsedSub)
         
     possibleMatches = []
@@ -74,6 +80,9 @@ def getMatches(formid):
 
     # sorts the dictionary from highest to lowest value
     sorted_matchesDict = dict( sorted(matchesDict.items(), key=operator.itemgetter(1), reverse=True))
+
+    # for match in sorted_matchesDict:
+    #     print(match.getNamesAsString() + sorted_matchesDict[match])
 
     uniqueMatchesDict = { }
     matchedFemales = []
@@ -96,7 +105,7 @@ def getMatches(formid):
     return responseStr
 
 # gets submissions from json API class
-def getDataFromSubmissions(formId):
+def parseDataFromSubmissions(formId):
     submissions = jotform_api.JotformAPI.getFormSubmissions(formId)
 
     parsedSubmissions = []
@@ -104,6 +113,8 @@ def getDataFromSubmissions(formId):
     for sub in submissions:
         json_object = json.dumps(sub, indent=2) # converts to json and makes it pretty
         sub_json = json.loads(json_object) # makes json parsable
+
+        # print(json_object)
 
         # submission data
         firstName = ""
@@ -114,6 +125,7 @@ def getDataFromSubmissions(formId):
         responses = []
         responsesDict = {}
         creationDate = sub_json["created_at"]
+
         for answer in sub_json["answers"]:
 
             # TODO combine the key and value of answer to allow for extra check that we are comparing the same questions
@@ -146,8 +158,10 @@ def getDataFromSubmissions(formId):
             elif sub_json["answers"][answer]["name"] == "age":
                 age = sub_json["answers"][answer]["answer"]
             elif sub_json["answers"][answer]["name"] == "gender":
-                gender = sub_json["answers"][answer]["answer"]
-        
+                try:
+                    gender = sub_json["answers"][answer]["answer"]
+                except:
+                    gender = "NULL"
         parsedSubmissions.append(submission.Submission(firstName, lastName, email, age, gender, responsesDict, creationDate))
 
     return parsedSubmissions
