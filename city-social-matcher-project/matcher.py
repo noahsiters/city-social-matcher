@@ -2,51 +2,63 @@ import operator
 import jotform_api
 import json
 import submission
-import paired_submission
+import submission_pair
     
 # define methods
 # this method will combine each persons answers to see how similar they are, and give it a percentage of similarity
 # TODO put in a swapper to make sure we get the best possible list of matches (maybe compare matches with other matches to see which is better)
 # TODO or try stable marriage problem with gale shapely algorithm
-def getCompatibilityPercentage(male, female):
-    maleResp = male.getResponses()
-    femaleResp = female.getResponses()
+def getPreferenceList(submission, suitors):
+    # each time this is called, return a list of that submitters preferences, from most compatible to least compatible
+    pairs = []
+    pairsDict = {}
+    preferenceList = []
 
-    percentages = []
+    # for each suitor, create a paired submission object
+    for suitor in suitors:
+        # similarityPercentage = getCompatibilityPercentage(submission, suitor)
+        pairs.append(submission_pair.SubmissionPair(submission, suitor))
+    
+    # for each pair, store them in a dictionary with their similarity percentage
+    for pair in pairs:
+        pairsDict[pair] = str(pair.getPercentageOfSimilarAnswers()) + "%"
 
-    # k = 0
-    # while k < len(maleResp):
-    #     if maleResp[k] == femaleResp[k]: # if responses are exact
-    #         percentages.append(1)
-    #     elif abs(maleResp[k] - femaleResp[k]) == 1: # if responses are 1 away
-    #         percentages.append(.75)
-    #     elif abs(maleResp[k] - femaleResp[k]) == 2: # if responses are 2 away
-    #         percentages.append(.5)
-    #     elif abs(maleResp[k] - femaleResp[k]) == 3: # if responses are 3 away
-    #         percentages.append(.25)
-    #     elif abs(maleResp[k] - femaleResp[k]) == 4: # if responses are opposite
-    #         percentages.append(0)
-    #     k += 1
+    # sort dictionary by percentage in descending order
+    pairsDict_sorted_desc = dict( sorted(pairsDict.items(), key=operator.itemgetter(1), reverse=True))
 
-    for keyM in maleResp:
-        for keyF in femaleResp:
-            if keyM == keyF: # only comparing IF the question is the same
-                # print(keyM + " : " + keyF)
-                if maleResp[keyM] == femaleResp[keyF]: # if exact
-                    percentages.append(1)
-                elif abs(maleResp[keyM] - femaleResp[keyF]) == 1: # if 1 away
-                    percentages.append(.75)
-                elif abs(maleResp[keyM] - femaleResp[keyF]) == 2: # if 2 away
-                    percentages.append(.50)
-                elif abs(maleResp[keyM] - femaleResp[keyF]) == 3: # if 3 away
-                    percentages.append(.25)
-                elif abs(maleResp[keyM] - femaleResp[keyF]) == 4: # if opposite
-                    percentages.append(0)
+    # add each pair
+    for key in pairsDict_sorted_desc:
+        preferenceList.append(key)
 
-    return round((sum(percentages) / len(percentages)) * 100) # get the average percentage and move it one decimal
+    return preferenceList
+
+def getStableMarriages(formid):
+    parsedSubmissions = parseDataFromSubmissions(formid)
+
+    listOfMales = []
+    listOfFemales = []
+
+    for sub in parsedSubmissions:
+        if sub.getGender() == "Male":
+            listOfMales.append(sub)
+        elif sub.getGender() == "Female":
+            listOfFemales.append(sub)
+    
+    # get preference lists for each male and female
+    for male in listOfMales:
+        male.setPreferenceList(getPreferenceList(male, listOfFemales))
+        # print("LIST FOR " + male.getFullName() + "\n")
+        # l = male.getPreferenceList()
+        # for item in l:
+        #     print(item.getNamesAsString())
+        # print("\n")
+
+    for female in listOfFemales:
+        female.setPreferenceList(getPreferenceList(female, listOfMales))
 
 # this method will get all of the combinations and organize them in a single dictionary, then sort in descending order
 def getMatches(formid):
+    getStableMarriages(formid)
     parsedSubmissions = parseDataFromSubmissions(formid)
 
     # for parsedSub in parsedSubmissions:
@@ -71,7 +83,7 @@ def getMatches(formid):
     for female in females:
         for male in males:
             # create a new paried_submission object (a match of two submission objects) and store it in the possibleMatches list
-            possibleMatches.append(paired_submission.PairedSubmission(male, female))
+            possibleMatches.append(submission_pair.SubmissionPair(male, female))
 
     # for every possible match, store it in a dictionary with itself as the key and the compatibility percentage as the value
     # (this is so we can sort it from highest to lowest percentage
@@ -95,8 +107,8 @@ def getMatches(formid):
             matchedFemales.append(key.getFemale()) # add female to list of matched females
             matchedMales.append(key.getMale()) # add male to list of matched males
 
-    for key in uniqueMatchesDict:
-        print(key.getNamesAsString() + " : " + uniqueMatchesDict[key])
+    # for key in uniqueMatchesDict:
+    #     print(key.getNamesAsString() + " : " + uniqueMatchesDict[key])
 
     responseStr = "MATCHES:\n"
     for key in uniqueMatchesDict:

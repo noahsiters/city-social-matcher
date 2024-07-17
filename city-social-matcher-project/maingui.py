@@ -100,28 +100,19 @@ def createMainWindow():
 
     root.mainloop()
 
-def updateStatusBox(statusBox, message):
-    # clearTextBox(statusBox)
-    dt_string = datetime.now().strftime("%H:%M:%S") # mm/dd/YY H:M:S
-
-    statusBox.configure(state="normal")
-    statusBox.insert("insert", "(" + dt_string + ") " + message + "\n")
-    statusBox.configure(state="disabled")
-
 # click events
 def processButton_Clicked(parameters):
+    # set attributes
     comboBox = parameters[0]
     textbox = parameters[1]
     statusBox = parameters[2]
-    clearTextBox(textbox)
-    # formid = parameters[0].get()
-    textbox.configure(state="normal")
-    # updateStatusBox(statusBox, "Processing submisisons from: " + comboBox.get())
+
+    # get list of matches with formid
     formid = matcher.getFormIdBasedOnFormTitle(comboBox.get())
     matches = matcher.getMatches(formid)
-    print(matches)
-    textbox.insert("insert", matches)
-    textbox.configure(state="disabled")
+
+    # update textbox and status box
+    updateTextBox(textbox, matches)
     updateStatusBox(statusBox, "Matches retrieved!")
 
 def updateButton_Clicked(apikey, label):
@@ -132,7 +123,21 @@ def updateButton_Clicked(apikey, label):
     else:
         label.configure(text="API Key field cannot be blank!")
 
+# helper methods
 def clearTextBox(textbox):
     textbox.configure(state="normal")
     textbox.delete('1.0', END)
     textbox.configure(state="disabled")
+
+def updateTextBox(textbox, content):
+    clearTextBox(textbox)
+    textbox.configure(state="normal")
+    textbox.insert("insert", content)
+    textbox.configure(state="disabled")
+
+def updateStatusBox(statusBox, message):
+    dt_string = datetime.now().strftime("%H:%M:%S") # mm/dd/YY H:M:S
+
+    statusBox.configure(state="normal")
+    statusBox.insert("insert", "(" + dt_string + ") " + message + "\n")
+    statusBox.configure(state="disabled")

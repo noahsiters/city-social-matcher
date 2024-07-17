@@ -7,6 +7,7 @@ class Submission:
         self.gender = gender
         self.responses = responses
         self.creationDate = creationDate
+        self.preferenceList = []
 
 
     def getFirstName(self):
@@ -29,3 +30,9 @@ class Submission:
     
     def getResponses(self):
         return self.responses
+    
+    def setPreferenceList(self, arg):
+        self.preferenceList = arg
+
+    def getPreferenceList(self):
+        return self.preferenceList

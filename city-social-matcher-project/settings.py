@@ -4,6 +4,8 @@ import jotform_api
 import json
 
 def updateAPIKey(apikey):
+    
+    # only change if there is a value in apikey, else return false
     if apikey != '':
         if os.path.exists(".env") == False:
             f = open(".env", "w")
@@ -37,7 +39,9 @@ def checkCurrentUser():
     dotenv.load_dotenv(dotenv_file)
     apikey = dotenv.get_key(dotenv_file, "API_KEY")
 
+    # getUser will return false if user is invalid
     user = jotform_api.JotformAPI.getUser(apikey)
+
     if user == False:
         return False
     else:
