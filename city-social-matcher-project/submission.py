@@ -1,5 +1,6 @@
 class Submission:
-    def __init__(self, firstName, lastName, email, age, gender, responses, creationDate):
+    def __init__(self, id, firstName, lastName, email, age, gender, responses, creationDate):
+        self.id = id
         self.firstName = firstName
         self.lastName = lastName
         self.email = email
@@ -10,6 +11,9 @@ class Submission:
         self.preferenceList = []
 
 
+    def getId(self):
+        return self.id
+    
     def getFirstName(self):
         return self.firstName
     

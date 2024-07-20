@@ -3,32 +3,66 @@ import jotform_api
 import json
 import submission
 import submission_pair
+import random
     
+# TODO --
+# remove generatePercentage from submission_pair class
+# maybe remove submission_pair class
+# put in checks to make sure lists are equal
+# put in more info for the user
 # define methods
 # this method will combine each persons answers to see how similar they are, and give it a percentage of similarity
-# TODO put in a swapper to make sure we get the best possible list of matches (maybe compare matches with other matches to see which is better)
-# TODO or try stable marriage problem with gale shapely algorithm
-def getPreferenceList(submission, suitors):
-    # each time this is called, return a list of that submitters preferences, from most compatible to least compatible
+def generatePercentageOfSimilarAnswers(male, female):
+        maleResp = male.getResponses()
+        femaleResp = female.getResponses()
+
+        percentages = []
+
+        for keyM in maleResp:
+            for keyF in femaleResp:
+                if keyM == keyF: # only comparing IF the question is the same
+                    # print(keyM + " : " + keyF)
+                    if maleResp[keyM] == femaleResp[keyF]: # if exact
+                        percentages.append(1)
+                    elif abs(maleResp[keyM] - femaleResp[keyF]) == 1: # if 1 away
+                        percentages.append(.75)
+                    elif abs(maleResp[keyM] - femaleResp[keyF]) == 2: # if 2 away
+                        percentages.append(.50)
+                    elif abs(maleResp[keyM] - femaleResp[keyF]) == 3: # if 3 away
+                        percentages.append(.25)
+                    elif abs(maleResp[keyM] - femaleResp[keyF]) == 4: # if opposite
+                        percentages.append(0)
+
+        return round((sum(percentages) / len(percentages)) * 100) # get the average percentage and move it one decimal
+
+def generatePreferenceList(submission, suitors):
     pairs = []
     pairsDict = {}
     preferenceList = []
 
-    # for each suitor, create a paired submission object
-    for suitor in suitors:
-        # similarityPercentage = getCompatibilityPercentage(submission, suitor)
-        pairs.append(submission_pair.SubmissionPair(submission, suitor))
-    
-    # for each pair, store them in a dictionary with their similarity percentage
-    for pair in pairs:
-        pairsDict[pair] = str(pair.getPercentageOfSimilarAnswers()) + "%"
+    if submission.getGender() == "Male":
+        for suitor in suitors:
+            pairs.append(submission_pair.SubmissionPair(submission, suitor))
 
-    # sort dictionary by percentage in descending order
-    pairsDict_sorted_desc = dict( sorted(pairsDict.items(), key=operator.itemgetter(1), reverse=True))
+        for pair in pairs:
+            pairsDict[pair] = str(pair.getPercentageOfSimilarAnswers()) + "%"
 
-    # add each pair
-    for key in pairsDict_sorted_desc:
-        preferenceList.append(key)
+        pairsDict_sorted_desc = dict( sorted(pairsDict.items(), key=operator.itemgetter(1), reverse=True))
+
+        for key in pairsDict_sorted_desc:
+            preferenceList.append(key.getFemale())
+
+    elif submission.getGender() == "Female":
+        for suitor in suitors:
+            pairs.append(submission_pair.SubmissionPair(suitor, submission))
+
+        for pair in pairs:
+            pairsDict[pair] = str(pair.getPercentageOfSimilarAnswers()) + "%"
+
+        pairsDict_sorted_desc = dict( sorted(pairsDict.items(), key=operator.itemgetter(1), reverse=True))
+
+        for key in pairsDict_sorted_desc:
+            preferenceList.append(key.getMale())
 
     return preferenceList
 
@@ -43,27 +77,79 @@ def getStableMarriages(formid):
             listOfMales.append(sub)
         elif sub.getGender() == "Female":
             listOfFemales.append(sub)
+
+    males_free = list(listOfMales)
+    females_free = list(listOfFemales)
     
     # get preference lists for each male and female
     for male in listOfMales:
-        male.setPreferenceList(getPreferenceList(male, listOfFemales))
-        # print("LIST FOR " + male.getFullName() + "\n")
-        # l = male.getPreferenceList()
-        # for item in l:
-        #     print(item.getNamesAsString())
-        # print("\n")
+        male.setPreferenceList(generatePreferenceList(male, listOfFemales))
 
     for female in listOfFemales:
-        female.setPreferenceList(getPreferenceList(female, listOfMales))
+        female.setPreferenceList(generatePreferenceList(female, listOfMales))
+
+    # for male in listOfMales:
+    #     print(male.getFullName() + " PREFS: \n")
+    #     for female in male.getPreferenceList():
+    #         print(female.getFullName() + " " + str(generatePercentageOfSimilarAnswers(male, female)) + "%")
+    #     print("\n")
+    # for female in listOfFemales:
+    #     print(female.getFullName() + " PREFS: \n")
+    #     for male in female.getPreferenceList():
+    #         print(male.getFullName() + " " + str(generatePercentageOfSimilarAnswers(male, female)) + "%")
+    #     print("\n")
+
+    matches = {}
+    for male in listOfMales:
+        matches[male] = ''
+
+    random.shuffle(listOfMales)
+
+    while len(males_free) > 0:
+        for male in listOfMales:
+            print("PROCESSING MALE: " + male.getFullName())
+            for female in male.getPreferenceList():
+                if (male not in males_free):
+                    print("MALE ALREADY MATCHED, NEXT!")
+                    break
+                print("\nFREE MALES: \n")
+                for item in males_free:
+                    print(item.getFullName() + " (" + item.getId() + ")")
+                print("\n")
+                print(male.getFullName() + "'s Top Choice: " + female.getFullName())
+                if female not in list(matches.values()):
+                    print(male.getFullName() + " AND " + female.getFullName() + " ARE MATCHED")
+                    matches[male] = female
+                    males_free.remove(male)
+                    break
+                elif female in list(matches.values()):
+                    current_suitor = list(matches.keys())[list(matches.values()).index(female)]
+                    print(female.getFullName() + " ALREADY MATCHED WITH " + current_suitor.getFullName())
+                    f_list = female.getPreferenceList()
+                    # checking who is more preferred (should we do based on index or percentage?)
+                    # if f_list.index(male) < f_list.index(current_suitor):
+                    if generatePercentageOfSimilarAnswers(male, female) > generatePercentageOfSimilarAnswers(current_suitor, female):
+                        matches[current_suitor] = ''
+                        males_free.append(current_suitor)
+                        matches[male] = female
+                        males_free.remove(male)
+                        print('{} was earlier engaged to {} but now is engaged to {}! '.format(female.getFullName(), current_suitor.getFullName(), male.getFullName()))
+
+
+
+
+
+
+
+    print('\n \n \n ')
+    print('Stable Matching Finished ! Happy engagement !')
+    for male in matches.keys():
+        print('{} is engaged to {} !'.format(male.getFullName(), matches[male].getFullName()))
 
 # this method will get all of the combinations and organize them in a single dictionary, then sort in descending order
 def getMatches(formid):
     getStableMarriages(formid)
     parsedSubmissions = parseDataFromSubmissions(formid)
-
-    # for parsedSub in parsedSubmissions:
-    #     print(parsedSub.getFullName())
-    #     print(parsedSub.getGender())
 
     males = []
     females = []
@@ -93,9 +179,6 @@ def getMatches(formid):
     # sorts the dictionary from highest to lowest value
     sorted_matchesDict = dict( sorted(matchesDict.items(), key=operator.itemgetter(1), reverse=True))
 
-    # for match in sorted_matchesDict:
-    #     print(match.getNamesAsString() + sorted_matchesDict[match])
-
     uniqueMatchesDict = { }
     matchedFemales = []
     matchedMales = []
@@ -106,9 +189,6 @@ def getMatches(formid):
             uniqueMatchesDict[key] = sorted_matchesDict[key]
             matchedFemales.append(key.getFemale()) # add female to list of matched females
             matchedMales.append(key.getMale()) # add male to list of matched males
-
-    # for key in uniqueMatchesDict:
-    #     print(key.getNamesAsString() + " : " + uniqueMatchesDict[key])
 
     responseStr = "MATCHES:\n"
     for key in uniqueMatchesDict:
@@ -129,6 +209,7 @@ def parseDataFromSubmissions(formId):
         # print(json_object)
 
         # submission data
+        id = sub_json["id"]
         firstName = ""
         lastName = ""
         email = ""
@@ -174,7 +255,7 @@ def parseDataFromSubmissions(formId):
                     gender = sub_json["answers"][answer]["answer"]
                 except:
                     gender = "NULL"
-        parsedSubmissions.append(submission.Submission(firstName, lastName, email, age, gender, responsesDict, creationDate))
+        parsedSubmissions.append(submission.Submission(id, firstName, lastName, email, age, gender, responsesDict, creationDate))
 
     return parsedSubmissions
 

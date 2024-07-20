@@ -3,125 +3,71 @@ import jotform_api
 import json
 import submission
 import operator
+import random
+
+# have tests that shuffle the order of inputs, and tests that switch the order by girls instead of guys
+def testStableMatching():
+    preferences = {
+        'Noah': ['Natalie', 'Brianna', 'Katie', 'Sarah', 'Dana', 'Kate', 'Taylor'],
+        'Nat': ['Natalie', 'Brianna', 'Katie', 'Dana', 'Kate', 'Taylor', 'Sarah'],
+        'Chad': ['Katie', 'Kate', 'Natalie', 'Sarah', 'Brianna', 'Taylor', 'Dana'],
+        'Evan': ['Sarah', 'Natalie', 'Katie', 'Brianna', 'Kate', 'Taylor', 'Dana'],
+        'Patrick': ['Sarah', 'Natalie', 'Kate', 'Katie', 'Taylor', 'Brianna', 'Dana'],
+        'Jesue': ['Taylor', 'Katie', 'Natalie', 'Brianna', 'Dana', 'Sarah', 'Kate'],
+        'Will': ['Brianna', 'Natalie', 'Kate', 'Dana', 'Katie', 'Sarah', 'Taylor'],
+        'Natalie': ['Nat', 'Noah', 'Evan', 'Patrick', 'Will', 'Chad', 'Jesue'],
+        'Dana': ['Will', 'Noah', 'Nat', 'Jesue', 'Patrick', 'Chad', 'Evan'],
+        'Kate': ['Patrick', 'Chad', 'Will', 'Noah', 'Nat', 'Evan', 'Jesue'],
+        'Sarah': ['Evan', 'Patrick', 'Noah', 'Chad', 'Will', 'Nat', 'Jesue'],
+        'Brianna': ['Will', 'Nat', 'Noah', 'Chad', 'Evan', 'Patrick', 'Jesue'],
+        'Taylor': ['Patrick', 'Jesue', 'Chad', 'Will', 'Nat', 'Noah', 'Evan'],
+        'Katie': ['Chad', 'Patrick', 'Evan', 'Noah', 'Nat', 'Will', 'Jesue']
+        }
+    
+    males = ['Noah', 'Nat', 'Chad', 'Evan', 'Patrick', 'Jesue', 'Will']
+    females = ['Natalie', 'Dana', 'Kate', 'Sarah', 'Brianna', 'Taylor', 'Katie']
+
+    random.shuffle(males)
+
+    matches = gale_shapley(preferences, males)
+
+    print(f'\nMatches\n{matches}')
+    
+    
+    for key in preferences:
+        print(preferences.get(key))
+
+def gale_shapley(prefs, proposers):
+    matches = []
+    while len(proposers) > 0:  #terminating condition - all proposers are matched
+        proposer = proposers.pop(0)  #Each round - proposer is popped from the free list
+        proposee = prefs[proposer].pop(0)  #Each round - the proposer's top preference is popped
+        matchLen= len(matches)
+        found = False
+        
+        for index in range(matchLen):  
+            match = matches[index]
+            if proposee in match:  #proposee is already matched
+                found = True
+                temp = match.copy()
+                temp.remove(proposee)
+                matchee = temp.pop()
+                if prefs[proposee].index(proposer) < prefs[proposee].index(matchee):  #proposer is a higher preference 
+                    matches.remove(match)  #remove old match
+                    matches.append([proposer, proposee])  #create new match with proposer
+                    proposers.append(matchee)  #add the previous proposer to the free list of proposers
+                else:
+                    proposers.append(proposer)  #proposer wasn't a higher prefence, so gets put back on free list
+                break
+            else:
+                continue
+        if not found:  #proposee was not previously matched so is automatically matched to proposer
+            matches.append([proposer, proposee])
+        else:
+            continue
+    return matches
 
 def test():
-    # testGetSubmissions()
-    testGetFormSubmissions()
-
-def getMatches(people):
-    males = []
-    females = []
-
-    responsesDict = {
-
-    }
-
-    for pers in people:
-        if pers.getGender() == "male":
-            males.append(pers)
-        elif pers.getGender() == "female":
-            females.append(pers)
-
-    # adding combinations and scores to dictionary
-    i = 0
-    for female in females:
-        for male in males:
-            responsesDict[male.getFullName() + " + " + female.getFullName()] = str(matcher.getCompatibilityPercentage(male, female)) + "%"
-
-    sorted_responsesDict = dict( sorted(responsesDict.items(), key=operator.itemgetter(1), reverse=True)) # reverse=True sorts in descending
-    # print(sorted_responsesDict)
-    return sorted_responsesDict
-
-def testGetSubmissions():
-    # formid = "241729074080152"
-    # formid = "241778484441162"
-    formid="241779041684161"
-    responseString = matcher.getSubmissions(formid)
-    print(responseString)
-
-def testGetFormSubmissions():
-    formid="241779041684161"
-    submissions = jotform_api.JotformAPI.getFormSubmissions(formid) # returns a list of form submissions, each submission in dict format
-
-    responsesDict = {
-
-    }
-
-    people = []
-    males = []
-    females = []
-
-    # categories = ["Relationships", "Passions/Hobbies"]
-
-    prettyJsonResponses = []
-
-    # will need to dynamically create person objects based on the number of submissions between two dates
-    for sub in submissions:
-        json_object = json.dumps(sub, indent=2)
-        # prettyJsonResponses.append(json_object)
-        sub_json = json.loads(json_object)
-
-        creationDate = sub_json["created_at"]
-
-        # personal info
-        firstName = ""
-        lastName = ""
-        email = ""
-        age = ""
-        gender = ""
-        responses = []
-        for answer in sub_json["answers"]:
-
-            # check if answer is of type "control_matrix" (table that contains answers)
-            if sub_json["answers"][answer]["type"] == "control_matrix":
-                for key in sub_json["answers"][answer]["answer"]:
-                    resp = sub_json["answers"][answer]["answer"][key]
-                    # print(sub_json["answers"][answer]["answer"][key])
-                    if resp == "Strongly Disagree":
-                        responses.append(0)
-                    elif resp == "Disagree":
-                        responses.append(1)
-                    elif resp == "Neither":
-                        responses.append(2)
-                    elif resp == "Agree":
-                        responses.append(3)
-                    elif resp == "Strongly Agree":
-                        responses.append(4)
-            # check if answer is personal info
-            elif sub_json["answers"][answer]["name"] == "firstName":
-                firstName = sub_json["answers"][answer]["answer"]
-            elif sub_json["answers"][answer]["name"] == "lastName":
-                lastName = sub_json["answers"][answer]["answer"]
-            elif sub_json["answers"][answer]["name"] == "email":
-                email = sub_json["answers"][answer]["answer"]
-            elif sub_json["answers"][answer]["name"] == "age":
-                age = sub_json["answers"][answer]["answer"]
-            elif sub_json["answers"][answer]["name"] == "gender":
-                gender = sub_json["answers"][answer]["answer"]
-
-
-            # print(sub_json["answers"][answer]["answer"])
-            # print(sub_json["answers"][answer]["text"])
-
-            # get personal information
-            # if "First Name" in sub_json["answers"][answer]["text"]:
-            #     person["first-name"] = sub_json["answers"][answer]["answer"]
-            # elif "Last Name" in sub_json["answers"][answer]["text"]:
-            #     person["last-name"] = sub_json["answers"][answer]["answer"]
-
-        # people.append(person)
-        people.append(submission.Submission(firstName, lastName, email, age, gender, responses, creationDate))
-        
-        matches = getMatches(people)
-
-        for key in matches:
-            print(key + " : " + matches[key])
-    # print(prettyJsonResponses[0])
-
-    # for pers in people:
-    #     print(pers.getFirstName() + pers.getLastName())
-    #     print(pers.getResponses())
-
-    # print(json_object)
+    testStableMatching()
 
 test()
