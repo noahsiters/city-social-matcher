@@ -58,31 +58,31 @@ def createMainWindow():
     # form selection combo box
     if currentUser != False:
         values = matcher.getListOfUserForms()
-        formId_comboBox = customtkinter.CTkComboBox(root, values=values, width=400, state="readonly")
+        root.formId_comboBox = customtkinter.CTkComboBox(root, values=values, width=400, state="readonly")
     else:
-        formId_comboBox = customtkinter.CTkComboBox(root, values=[], width=400, state="readonly")
-    formId_comboBox.grid(row=0, column=1, columnspan=3, padx=20, pady=20, sticky="ew")
+        root.formId_comboBox = customtkinter.CTkComboBox(root, values=[], width=400, state="readonly")
+    root.formId_comboBox.grid(row=0, column=1, columnspan=3, padx=20, pady=20, sticky="ew")
 
     # results text box
-    resultsTextBox = customtkinter.CTkTextbox(root, width=520, height=280)
-    resultsTextBox.grid(row=1, column=0, rowspan=3, columnspan=3, padx=20, pady=20, sticky="w")
-    resultsTextBox.configure(state="disabled")
+    root.resultsTextBox = customtkinter.CTkTextbox(root, width=520, height=280)
+    root.resultsTextBox.grid(row=1, column=0, rowspan=3, columnspan=3, padx=20, pady=20, sticky="w")
+    root.resultsTextBox.configure(state="disabled")
 
     # status info text box
-    statusInfoTextBox = customtkinter.CTkTextbox(root, width=520, height=150)
-    statusInfoTextBox.grid(row=4, column=0, columnspan=3, padx=20, pady=20, sticky="ew")
-    statusInfoTextBox.configure(state="disabled")
+    root.statusInfoTextBox = customtkinter.CTkTextbox(root, width=520, height=150)
+    root.statusInfoTextBox.grid(row=4, column=0, columnspan=3, padx=20, pady=20, sticky="ew")
+    root.statusInfoTextBox.configure(state="disabled")
 
     if currentUser != False:
-        updateStatusBox(statusInfoTextBox, "User found! (" + currentUser["username"] + ")")
+        updateStatusBox(root.statusInfoTextBox, "User found! (" + currentUser["username"] + ")")
     else:
-        updateStatusBox(statusInfoTextBox, "No account found for API key!\nPlease go to settings and enter a new API key.")
+        updateStatusBox(root.statusInfoTextBox, "No account found for API key!\nPlease go to settings and enter a new API key.")
     
     # create paramters for methods to access
-    parameters = [formId_comboBox, resultsTextBox, statusInfoTextBox]
+    parameters = [root]
 
     # process button
-    root.submitButton = customtkinter.CTkButton(root, text="Submit", command=lambda: processButton_Clicked(parameters))
+    root.submitButton = customtkinter.CTkButton(root, text="Submit", command=lambda: processButton_Clicked(root))
     root.submitButton.grid(row=0, column=4, padx=20, pady=20, sticky="s")
 
     # settings button
@@ -90,10 +90,11 @@ def createMainWindow():
     root.settingsButton.grid(row=1, column=4, padx=20, pady=20, sticky="n")
 
     # help button
-    root.helpButton = customtkinter.CTkButton(root, text="Help", fg_color="darkgray", text_color="black", hover_color="gray")
-    root.helpButton.grid(row=4, column=4, padx=20, pady=20, sticky="s")
+    root.infoButton = customtkinter.CTkButton(root, text="Print Matches Details", fg_color="darkgray", text_color="black", hover_color="gray", command=lambda: infoButton_Clicked(root))
+    root.infoButton.grid(row=4, column=4, padx=20, pady=20, sticky="s")
+    root.infoButton.configure(state="disabled")
 
-    formId_comboBox.focus()
+    root.formId_comboBox.focus()
 
     for child in root.winfo_children():
         child.grid_configure(padx=5, pady=5)
@@ -101,19 +102,25 @@ def createMainWindow():
     root.mainloop()
 
 # click events
-def processButton_Clicked(parameters):
+def processButton_Clicked(arg):
     # set attributes
-    comboBox = parameters[0]
-    textbox = parameters[1]
-    statusBox = parameters[2]
+    root = arg
+    comboBox = root.formId_comboBox
+    textbox = root.resultsTextBox
+    statusBox = root.statusInfoTextBox
+    infoButton = root.infoButton
 
     # get list of matches with formid
     formid = matcher.getFormIdBasedOnFormTitle(comboBox.get())
-    matches = matcher.getMatches(formid)
+    response = matcher.getMatches(formid)
 
     # update textbox and status box
-    updateTextBox(textbox, matches)
+    updateTextBox(textbox, response[0])
     updateStatusBox(statusBox, "Matches retrieved!")
+    updateStatusBox(statusBox, "Outputted matches to file 'matches.txt'.")
+
+    # enable info button
+    infoButton.configure(state="enabled")
 
 def updateButton_Clicked(apikey, label):
     print(apikey)
@@ -122,6 +129,20 @@ def updateButton_Clicked(apikey, label):
         label.configure(text="API Key Updated! Please restart application.")
     else:
         label.configure(text="API Key field cannot be blank!")
+
+def infoButton_Clicked(arg):
+    # set attributes
+    root = arg
+    comboBox = root.formId_comboBox
+    statusBox = root.statusInfoTextBox
+
+    # get list of matches with formid
+    formid = matcher.getFormIdBasedOnFormTitle(comboBox.get())
+    response = matcher.getMatches(formid)
+
+    filename = "matches-details.txt"
+    matcher.outputToFile(filename, response[1])
+    updateStatusBox(statusBox, "Outputted details to file: '{}'.".format(filename))
 
 # helper methods
 def clearTextBox(textbox):

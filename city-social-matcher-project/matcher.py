@@ -97,11 +97,12 @@ def getStableMarriages(submissions):
                             males_free.remove(male)
 
         for male in matches.keys():
-            responseStr += '{} is engaged to {} !\n'.format(male.getFullName(), matches[male].getFullName())
+            responseStr += '{}({}) is engaged to {}({}) !\n'.format(male.getFullName(), male.getEmail(), matches[male].getFullName(), matches[male].getEmail())
     else:
         responseStr = "Groups are not equal!"
 
-    return responseStr
+    outputToFile("matches.txt", matches)
+    return [responseStr, matches]
 
 # this method will get all of the combinations and organize them in a single dictionary, then sort in descending order
 def getMatches(formid):
@@ -109,6 +110,38 @@ def getMatches(formid):
     matches = getStableMarriages(parsedSubmissions)
 
     return matches
+
+def outputToFile(filename, matches):
+    outputStr = ""
+
+    if filename == "matches.txt":
+        outputStr += "MATCHES: \n\n"
+        for male in matches:
+            outputStr += '{} ({})\n{} ({})\n---------------\n'.format(male.getFullName(), male.getEmail(), matches[male].getFullName(), matches[male].getEmail())
+
+        f = open(filename, "w")
+        f.write(outputStr)
+        f.close()
+
+    elif filename == "matches-details.txt":
+        outputStr += "DETAILS: \n\n"
+        for male in matches:
+            outputStr += 'Name: {}\nEmail: {}\nPreferences: ['.format(male.getFullName(), male.getEmail())
+            for preference in male.getPreferenceList():
+                outputStr += '{} ({}%), '.format(preference.getFullName(), str(generatePercentageOfSimilarAnswers(male, preference)))
+            outputStr = outputStr[:-2]
+            outputStr += "]\n---------------\n"
+
+        for female in matches.values():
+            outputStr += 'Name: {}\nEmail: {}\nPreferences: ['.format(female.getFullName(), female.getEmail())
+            for preference in female.getPreferenceList():
+                outputStr += '{} ({}%), '.format(preference.getFullName(), str(generatePercentageOfSimilarAnswers(female, preference)))
+            outputStr = outputStr[:-2]
+            outputStr += "]\n---------------\n"
+
+        f = open(filename, "w")
+        f.write(outputStr)
+        f.close()
 
 # gets submissions from json API class
 def parseDataFromSubmissions(formId):
