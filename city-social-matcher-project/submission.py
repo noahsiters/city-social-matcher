@@ -1,5 +1,5 @@
 class Submission:
-    def __init__(self, id, firstName, lastName, email, age, gender, responses, creationDate):
+    def __init__(self, id, firstName, lastName, email, age, gender, responses, creationDate, eventDate):
         self.id = id
         self.firstName = firstName
         self.lastName = lastName
@@ -8,6 +8,7 @@ class Submission:
         self.gender = gender
         self.responses = responses
         self.creationDate = creationDate
+        self.eventDate = eventDate
         self.preferenceList = []
 
 
@@ -31,6 +32,9 @@ class Submission:
     
     def getGender(self):
         return self.gender
+    
+    def getEventDate(self):
+        return self.eventDate
     
     def getResponses(self):
         return self.responses

@@ -4,9 +4,6 @@ import json
 import submission
 import random
     
-# TODO --
-# put in checks to make sure lists are equal
-# put in more info for the user
 # this method will combine each persons answers to see how similar they are, and give it a percentage of similarity
 def generatePercentageOfSimilarAnswers(personA, personB):
         responsesA = personA.getResponses()
@@ -96,55 +93,56 @@ def getStableMarriages(submissions):
                             matches[male] = female
                             males_free.remove(male)
 
+        iterator = 1
         for male in matches.keys():
-            responseStr += '{}({}) is engaged to {}({}) !\n'.format(male.getFullName(), male.getEmail(), matches[male].getFullName(), matches[male].getEmail())
+            responseStr += str(iterator) + ': {} ({}) + {} ({})\n'.format(male.getFullName(), male.getEmail(), matches[male].getFullName(), matches[male].getEmail())
+            iterator += 1
     else:
         responseStr = "Groups are not equal!"
 
-    outputToFile("matches.txt", matches)
     return [responseStr, matches]
 
 # this method will get all of the combinations and organize them in a single dictionary, then sort in descending order
-def getMatches(formid):
-    parsedSubmissions = parseDataFromSubmissions(formid)
-    matches = getStableMarriages(parsedSubmissions)
+def getMatches(formid, eventDate):
+    parsedSubmissions = parseDataFromSubmissions(formid, eventDate)
 
-    return matches
+    if parsedSubmissions == "ERROR_DATES":
+        return "ERROR_DATES"
+    else:
+        matches = getStableMarriages(parsedSubmissions)
+        return matches
 
-def outputToFile(filename, matches):
+def getOutputStringForFileSave(checkboxVal, response, eventDate):
     outputStr = ""
-
-    if filename == "matches.txt":
-        outputStr += "MATCHES: \n\n"
-        for male in matches:
-            outputStr += '{} ({})\n{} ({})\n---------------\n'.format(male.getFullName(), male.getEmail(), matches[male].getFullName(), matches[male].getEmail())
-
-        f = open(filename, "w")
-        f.write(outputStr)
-        f.close()
-
-    elif filename == "matches-details.txt":
-        outputStr += "DETAILS: \n\n"
-        for male in matches:
-            outputStr += 'Name: {}\nEmail: {}\nPreferences: ['.format(male.getFullName(), male.getEmail())
+    if checkboxVal == "off":
+        outputStr += "MATCHES FOR EVENT DATE: " + eventDate + "\n\n"
+        outputStr += response[0]
+    elif checkboxVal == "on":
+        matches = response[1]
+        iterator = 1
+        for male in matches.keys():
+            outputStr += "MATCHES FOR EVENT DATE: " + eventDate + " (With Preference Lists)\n\n"
+            outputStr += 'MATCH {}: {} ({}) + {} ({})\n'.format(iterator, male.getFullName(), male.getEmail(), matches[male].getFullName(), matches[male].getEmail())
+            
+            outputStr += '{} Preferences: '.format(male.getFullName())
             for preference in male.getPreferenceList():
-                outputStr += '{} ({}%), '.format(preference.getFullName(), str(generatePercentageOfSimilarAnswers(male, preference)))
+                outputStr += '[{} ({}%), '.format(preference.getFullName(), str(generatePercentageOfSimilarAnswers(male, preference)))
             outputStr = outputStr[:-2]
-            outputStr += "]\n---------------\n"
+            outputStr += "]\n"
 
-        for female in matches.values():
-            outputStr += 'Name: {}\nEmail: {}\nPreferences: ['.format(female.getFullName(), female.getEmail())
-            for preference in female.getPreferenceList():
-                outputStr += '{} ({}%), '.format(preference.getFullName(), str(generatePercentageOfSimilarAnswers(female, preference)))
+            outputStr += '{} Preferences: '.format(matches[male].getFullName())
+            for preference in matches[male].getPreferenceList():
+                outputStr += '[{} ({}%), '.format(preference.getFullName(), str(generatePercentageOfSimilarAnswers(matches[male], preference)))
             outputStr = outputStr[:-2]
-            outputStr += "]\n---------------\n"
+            outputStr += "]\n"
 
-        f = open(filename, "w")
-        f.write(outputStr)
-        f.close()
+            outputStr += "---------------------------"
+
+    return outputStr
+
 
 # gets submissions from json API class
-def parseDataFromSubmissions(formId):
+def parseDataFromSubmissions(formId, dateOfEvent):
     submissions = jotform_api.JotformAPI.getFormSubmissions(formId)
 
     parsedSubmissions = []
@@ -165,10 +163,10 @@ def parseDataFromSubmissions(formId):
         responses = []
         responsesDict = {}
         creationDate = sub_json["created_at"]
+        eventDate = ""
 
         for answer in sub_json["answers"]:
 
-            # TODO combine the key and value of answer to allow for extra check that we are comparing the same questions
             # checks if answer is of type "control_matrix" (table that contains answers)
             if sub_json["answers"][answer]["type"] == "control_matrix":
                 for key in sub_json["answers"][answer]["answer"]:
@@ -197,14 +195,21 @@ def parseDataFromSubmissions(formId):
                 email = sub_json["answers"][answer]["answer"]
             elif sub_json["answers"][answer]["name"] == "age":
                 age = sub_json["answers"][answer]["answer"]
+            elif sub_json["answers"][answer]["name"] == "eventDate":
+                eventDate = sub_json["answers"][answer]["answer"]
             elif sub_json["answers"][answer]["name"] == "gender":
                 try:
                     gender = sub_json["answers"][answer]["answer"]
                 except:
                     gender = "NULL"
-        parsedSubmissions.append(submission.Submission(id, firstName, lastName, email, age, gender, responsesDict, creationDate))
 
-    return parsedSubmissions
+        # formattedEventDate = formatDate(eventDate)
+        if eventDate == dateOfEvent:
+            parsedSubmissions.append(submission.Submission(id, firstName, lastName, email, age, gender, responsesDict, creationDate, eventDate))
+    if len(parsedSubmissions) == 0:
+        return "ERROR_DATES"
+    else:
+        return parsedSubmissions
 
 def getListOfUserForms():
     # TODO form could be condensed into its own object
