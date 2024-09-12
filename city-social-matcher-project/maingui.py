@@ -61,8 +61,8 @@ def createMainWindow():
     root.formIdLabel = customtkinter.CTkLabel(root, text="Select Form: ")
     root.formIdLabel.grid(row=0, column=0, padx=20, pady=20, sticky="w")
 
-    eventDate = StringVar()
-    root.eventDateEntry = customtkinter.CTkEntry(root, width=140, placeholder_text="MM/DD/YY", textvariable=eventDate)
+    # eventDate input
+    root.eventDateEntry = customtkinter.CTkEntry(root, width=140, placeholder_text="MM/DD/YY")
     root.eventDateEntry.grid(row=0, column=0, padx=20, pady=20, sticky="e")
 
     # form selection combo box
@@ -123,6 +123,9 @@ def processButton_Clicked(arg):
     statusBox = root.statusInfoTextBox
     saveButton = root.saveButton
     eventDateEntry = root.eventDateEntry
+
+    # clear textbox
+    updateTextBox(textbox, "")
 
     # get list of matches with formid
     try:
