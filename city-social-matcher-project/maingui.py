@@ -19,7 +19,7 @@ def openSettingsWindow(*args):
     settingsWindow = Toplevel(root)
 
     settingsWindow.title("Settings")
-    appWidth, appHeight = 480, 200
+    appWidth, appHeight = 480, 150
     settingsWindow.geometry(f"{appWidth}x{appHeight}")
 
     # apikey label
@@ -40,6 +40,10 @@ def openSettingsWindow(*args):
     # update apikey button
     settingsWindow.apikeyUpdateButton = customtkinter.CTkButton(settingsWindow, text="Update", command=lambda: updateButton_Clicked(apikey.get(), settingsWindow.resultsLabel))
     settingsWindow.apikeyUpdateButton.grid(row=0, column=3, padx=10, pady=10, sticky="ew")
+
+    # show license button
+    settingsWindow.licenseButton = customtkinter.CTkButton(settingsWindow, fg_color="darkgray", text_color="black", hover_color="gray", text="LICENSE", command=lambda: licenseButton_Clicked())
+    settingsWindow.licenseButton.grid(row=1, column=3, padx=10, pady=10, sticky="ew")
 
     for child in settingsWindow.winfo_children():
         child.grid_configure(padx=5, pady=5)
@@ -146,7 +150,21 @@ def updateButton_Clicked(apikey, label):
     else:
         label.configure(text="API Key field cannot be blank!")
 
-# TODO when info button clicked, open file dialog and choose where to save file with matches info
+# method to display software license
+def licenseButton_Clicked():
+    license = Toplevel(root)
+
+    license.title("LICENSE")
+    appWidth, appHeight = 500, 500
+    license.geometry(f"{appWidth}x{appHeight}")
+
+    license.textBox = customtkinter.CTkTextbox(license, width=460, height=460)
+    license.textBox.grid(row=0, column=0, padx=20, pady=20, sticky="ew")
+
+    f = open("../LICENSE", "r")
+    license.textBox.insert("insert", f.read())
+    license.textBox.configure(state="disabled")
+ 
 def saveButton_Clicked(arg):
     # set attributes
     root = arg
