@@ -135,14 +135,16 @@ def getOutputStringForFileSave(checkboxVal, response, eventDate):
             outputStr = outputStr[:-2]
             outputStr += "]\n"
 
-            outputStr += "---------------------------"
+            outputStr += "---------------------------\n"
+            iterator += 1
 
     return outputStr
 
 
 # gets submissions from json API class
-def parseDataFromSubmissions(formId, dateOfEvent):
-    submissions = jotform_api.JotformAPI.getFormSubmissions(formId)
+def parseDataFromSubmissions(data, dateOfEvent):
+    # submissions = jotform_api.JotformAPI.getFormSubmissions(formId)
+    submissions = data[0]
 
     parsedSubmissions = []
 
@@ -274,8 +276,9 @@ def getFormIdBasedOnFormTitle(arg):
 
     return list(parsedForms.keys())[list(parsedForms.values()).index(arg)]
 
-def getEventDatesFromQuestions(formid):
-    questions = jotform_api.JotformAPI.getFormQuestions(formid)
+def getEventDatesFromQuestions(data):
+    # questions = jotform_api.JotformAPI.getFormQuestions(formid)
+    questions = data[1]
 
     json_object = json.dumps(questions, indent=2)
     question_json = json.loads(json_object)
@@ -285,8 +288,9 @@ def getEventDatesFromQuestions(formid):
             values = question_json[q]["options"].split("|")
             return values
         
-def checkIfFormHasEventDate(formid):
-    questions = jotform_api.JotformAPI.getFormQuestions(formid)
+def checkIfFormHasEventDate(data):
+    # questions = jotform_api.JotformAPI.getFormQuestions(formid)
+    questions = data[1]
 
     json_object = json.dumps(questions, indent=2)
     question_json = json.loads(json_object)
@@ -294,7 +298,8 @@ def checkIfFormHasEventDate(formid):
     for q in question_json:
         if question_json[q]["name"] == "eventDate":
             # check if submissions have submitted an event date
-            submissions = jotform_api.JotformAPI.getFormSubmissions(formid)
+            # submissions = jotform_api.JotformAPI.getFormSubmissions(formid)
+            submissions = data[0]
             
             for sub in submissions:
                 json_object = json.dumps(sub, indent=2) # converts to json and makes it pretty
@@ -311,10 +316,11 @@ def checkIfFormHasEventDate(formid):
         
     return False
 
-def checkFormValidity(formid):
+def checkFormValidity(data):
     # a form is valid if it is configured to be parsed with this matchmaker
     # currently this program supports forms from jotform with questions organized within the 'control_matrix' input with strongly agree to strongly disagree
-    questions = jotform_api.JotformAPI.getFormQuestions(formid)
+    # questions = jotform_api.JotformAPI.getFormQuestions(formid)
+    questions = data[1]
 
     json_object = json.dumps(questions, indent=2)
     question_json = json.loads(json_object)

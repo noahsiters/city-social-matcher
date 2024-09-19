@@ -7,6 +7,7 @@ import customtkinter # type: ignore
 import matcher
 import settings
 import os
+import jotform_api
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -122,11 +123,14 @@ def processButton_Clicked(root):
         processErrorMessage("ERROR 103: Form not found", root)
         return
     
+    # get data from jotform
+    data = jotform_api.JotformAPI.getJotformData(formid)
+    
     # clear textbox
     updateTextBox(root.resultsTextBox, "")
 
     # check if form is valid format
-    valid = matcher.checkFormValidity(formid)
+    valid = matcher.checkFormValidity(data)
 
     if (valid):
         updateStatusBox(root.statusInfoTextBox, "Form valid!")
@@ -135,14 +139,14 @@ def processButton_Clicked(root):
         return
 
     # check if form has event date, if so then we will order the submissions by the event date, if not then we will continue as is
-    hasDates = matcher.checkIfFormHasEventDate(formid)
+    hasDates = matcher.checkIfFormHasEventDate(data)
 
     # get response
     if (hasDates):
         eventDate = root.eventDate_comboBox.get()
-        response = matcher.getMatches(formid, eventDate)
+        response = matcher.getMatches(data, eventDate)
     else:
-        response = matcher.getMatches(formid, "")
+        response = matcher.getMatches(data, "")
 
     # if response string has errors, handle those:
     if "error" in response[0].casefold():
@@ -164,23 +168,27 @@ def updateButton_Clicked(apikey, label):
     else:
         label.configure(text="API Key field cannot be blank!")
  
-def saveButton_Clicked(arg):
-    # set attributes
-    root = arg
-    comboBox = root.formId_comboBox
-    statusBox = root.statusInfoTextBox
-    eventDateEntry = root.eventDateEntry
-    checkbox = root.preferenceListCheckbox
+def saveButton_Clicked(root):
+    try:
+        formid = matcher.getFormIdBasedOnFormTitle(root.formId_comboBox.get())
+    except:
+        processErrorMessage("ERROR 103: Form not found", root)
+        return
+    
+    data = jotform_api.JotformAPI.getJotformData(formid)
 
-    print(checkbox.get())
+    # check if form has event date, if so then we will order the submissions by the event date, if not then we will continue as is
+    hasDates = matcher.checkIfFormHasEventDate(data)
+
+    eventDate = ""
+    if (hasDates):
+        eventDate = root.eventDate_comboBox.get()
 
     # get list of matches with formid
-    formid = matcher.getFormIdBasedOnFormTitle(comboBox.get())
-    eventDate = eventDateEntry.get()
-    response = matcher.getMatches(formid, eventDate) # response[0] = string, response[1] is matches dict
+    response = matcher.getMatches(data, eventDate) # response[0] = string, response[1] is matches dict
 
-    outputStr = matcher.getOutputStringForFileSave(checkbox.get(), response, eventDate)
-    saveFile(statusBox, outputStr)
+    outputStr = matcher.getOutputStringForFileSave(root.preferenceListCheckbox.get(), response, eventDate)
+    saveFile(root.statusInfoTextBox, outputStr)
 
 
 # helper methods
@@ -223,11 +231,14 @@ def updateEventDateInput(formTitle, root):
         updateStatusBox(root.statusInfoTextBox, "Could not find form with that title.")
         return
     
-    hasDates = matcher.checkIfFormHasEventDate(formid)
+    # get jotform data
+    data = jotform_api.JotformAPI.getJotformData(formid)
+    
+    hasDates = matcher.checkIfFormHasEventDate(data)
 
     if (hasDates):
         # root.submitButton.configure(state="enabled") # enable submission button
-        eventDates = matcher.getEventDatesFromQuestions(formid)
+        eventDates = matcher.getEventDatesFromQuestions(data)
         root.eventDate_comboBox.configure(values=eventDates)
         root.eventDate_comboBox.grid(row=0, column=2, padx=5, pady=5, sticky="ew") # place combo box
         root.eventDate_comboBox.set(eventDates[0]) # set default value
