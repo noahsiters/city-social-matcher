@@ -48,6 +48,7 @@ def getStableMarriages(submissions):
     listOfFemales = []
 
     responseStr = ""
+    matches = {}
 
     for sub in submissions:
         if sub.getGender() == "Male":
@@ -66,7 +67,6 @@ def getStableMarriages(submissions):
         for female in listOfFemales:
             female.setPreferenceList(generatePreferenceList(female, listOfMales))
 
-        matches = {}
         for male in listOfMales:
             matches[male] = ''
 
@@ -98,30 +98,29 @@ def getStableMarriages(submissions):
             responseStr += str(iterator) + ': {} ({}) + {} ({})\n'.format(male.getFullName(), male.getEmail(), matches[male].getFullName(), matches[male].getEmail())
             iterator += 1
     else:
-        responseStr = "Groups are not equal!"
+        responseStr = "ERROR 101: GROUPS NOT EQUAL"
 
     return [responseStr, matches]
 
 # this method will get all of the combinations and organize them in a single dictionary, then sort in descending order
 def getMatches(formid, eventDate):
     parsedSubmissions = parseDataFromSubmissions(formid, eventDate)
-
-    if parsedSubmissions == "ERROR_DATES":
-        return "ERROR_DATES"
-    else:
-        matches = getStableMarriages(parsedSubmissions)
-        return matches
+    return getStableMarriages(parsedSubmissions)
 
 def getOutputStringForFileSave(checkboxVal, response, eventDate):
     outputStr = ""
     if checkboxVal == "off":
-        outputStr += "MATCHES FOR EVENT DATE: " + eventDate + "\n\n"
+        if eventDate != "":
+            outputStr += "MATCHES FOR EVENT DATE: " + eventDate + "\n\n"
+
         outputStr += response[0]
     elif checkboxVal == "on":
         matches = response[1]
         iterator = 1
         for male in matches.keys():
-            outputStr += "MATCHES FOR EVENT DATE: " + eventDate + " (With Preference Lists)\n\n"
+            if eventDate != "":
+                outputStr += "MATCHES FOR EVENT DATE: " + eventDate + " (With Preference Lists)\n\n"
+
             outputStr += 'MATCH {}: {} ({}) + {} ({})\n'.format(iterator, male.getFullName(), male.getEmail(), matches[male].getFullName(), matches[male].getEmail())
             
             outputStr += '{} Preferences: '.format(male.getFullName())
@@ -164,7 +163,7 @@ def parseDataFromSubmissions(formId, dateOfEvent):
         responsesDict = {}
         creationDate = sub_json["created_at"]
         eventDate = ""
-
+        
         for answer in sub_json["answers"]:
 
             # checks if answer is of type "control_matrix" (table that contains answers)
@@ -195,21 +194,41 @@ def parseDataFromSubmissions(formId, dateOfEvent):
                 email = sub_json["answers"][answer]["answer"]
             elif sub_json["answers"][answer]["name"] == "age":
                 age = sub_json["answers"][answer]["answer"]
-            elif sub_json["answers"][answer]["name"] == "eventDate":
-                eventDate = sub_json["answers"][answer]["answer"]
             elif sub_json["answers"][answer]["name"] == "gender":
                 try:
                     gender = sub_json["answers"][answer]["answer"]
                 except:
                     gender = "NULL"
+            
+        # check if we are ordering by date
+        if dateOfEvent == "":
+            # if no date, then simply add all the submissions to the parsedSubmissions list
+            parsedSubmissions.append(submission.Submission(id, firstName, lastName, email, age, gender, responsesDict, creationDate, ""))
+        else:
+            # if date, then separate each submission into its own date, and return only the submissions that match the date the user entered
+            for answer in sub_json["answers"]:
+                if sub_json["answers"][answer]["name"] == "eventDate":
+                    eventDate = sub_json["answers"][answer]["answer"]
 
-        # formattedEventDate = formatDate(eventDate)
-        if eventDate == dateOfEvent:
-            parsedSubmissions.append(submission.Submission(id, firstName, lastName, email, age, gender, responsesDict, creationDate, eventDate))
-    if len(parsedSubmissions) == 0:
-        return "ERROR_DATES"
-    else:
-        return parsedSubmissions
+            # convert all dates from M/D/YY to MM/DD/YY
+            submissionEventDateArr = eventDate.split("/")
+            adminEventDateArr = dateOfEvent.split("/")
+
+            if len(submissionEventDateArr[0]) == 1:
+                submissionEventDateArr[0] = "0" + submissionEventDateArr[0]
+            if len(submissionEventDateArr[1]) == 1:
+                submissionEventDateArr[1] = "0" + submissionEventDateArr[1]
+
+            # handle admin date
+            if len(adminEventDateArr[0]) == 1:
+                adminEventDateArr[0] = "0" + adminEventDateArr[0]
+            if len(adminEventDateArr[1]) == 1:
+                adminEventDateArr[1] = "0" + adminEventDateArr[1]
+
+            if str(submissionEventDateArr) == str(adminEventDateArr):
+                parsedSubmissions.append(submission.Submission(id, firstName, lastName, email, age, gender, responsesDict, creationDate, eventDate))
+
+    return parsedSubmissions
 
 def getListOfUserForms():
     # TODO form could be condensed into its own object
@@ -254,3 +273,59 @@ def getFormIdBasedOnFormTitle(arg):
             parsedForms[formId] = formTitle
 
     return list(parsedForms.keys())[list(parsedForms.values()).index(arg)]
+
+def getEventDatesFromQuestions(formid):
+    questions = jotform_api.JotformAPI.getFormQuestions(formid)
+
+    json_object = json.dumps(questions, indent=2)
+    question_json = json.loads(json_object)
+
+    for q in question_json:
+        if question_json[q]["name"] == "eventDate":
+            values = question_json[q]["options"].split("|")
+            return values
+        
+def checkIfFormHasEventDate(formid):
+    questions = jotform_api.JotformAPI.getFormQuestions(formid)
+
+    json_object = json.dumps(questions, indent=2)
+    question_json = json.loads(json_object)
+
+    for q in question_json:
+        if question_json[q]["name"] == "eventDate":
+            # check if submissions have submitted an event date
+            submissions = jotform_api.JotformAPI.getFormSubmissions(formid)
+            
+            for sub in submissions:
+                json_object = json.dumps(sub, indent=2) # converts to json and makes it pretty
+                sub_json = json.loads(json_object) # makes json parsable
+
+                for answer in sub_json["answers"]:
+                    if sub_json["answers"][answer]["name"] == "eventDate":
+                        try:
+                            # if we can successfully grab an answer from the eventDate question, return true
+                            test = sub_json["answers"][answer]["answer"]
+                            return True
+                        except:
+                            return False
+        
+    return False
+
+def checkFormValidity(formid):
+    # a form is valid if it is configured to be parsed with this matchmaker
+    # currently this program supports forms from jotform with questions organized within the 'control_matrix' input with strongly agree to strongly disagree
+    questions = jotform_api.JotformAPI.getFormQuestions(formid)
+
+    json_object = json.dumps(questions, indent=2)
+    question_json = json.loads(json_object)
+
+    validStrings = ["agree", "disagree"]
+
+    for q in question_json:
+        if question_json[q]["type"] == "control_matrix":
+            for str in validStrings:
+                if str in question_json[q]["mcolumns"].casefold():
+                    # form has control matrix type with a range of strongly agree to strongly disagree
+                    return True
+            
+    return False

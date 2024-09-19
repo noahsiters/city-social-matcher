@@ -26,3 +26,10 @@ class JotformAPI:
             return user
         except:
             return False
+        
+    def getFormQuestions(formid):
+        dotenv.load_dotenv()
+
+        jotformAPIClient = JotformAPIClient(os.getenv("API_KEY"))
+
+        return jotformAPIClient.get_form_questions(formid)

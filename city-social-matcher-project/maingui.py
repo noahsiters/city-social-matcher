@@ -41,10 +41,6 @@ def openSettingsWindow(*args):
     settingsWindow.apikeyUpdateButton = customtkinter.CTkButton(settingsWindow, text="Update", command=lambda: updateButton_Clicked(apikey.get(), settingsWindow.resultsLabel))
     settingsWindow.apikeyUpdateButton.grid(row=0, column=3, padx=10, pady=10, sticky="ew")
 
-    # show license button
-    settingsWindow.licenseButton = customtkinter.CTkButton(settingsWindow, fg_color="darkgray", text_color="black", hover_color="gray", text="LICENSE", command=lambda: licenseButton_Clicked())
-    settingsWindow.licenseButton.grid(row=1, column=3, padx=10, pady=10, sticky="ew")
-
     for child in settingsWindow.winfo_children():
         child.grid_configure(padx=5, pady=5)
     
@@ -61,17 +57,16 @@ def createMainWindow():
     root.formIdLabel = customtkinter.CTkLabel(root, text="Select Form: ")
     root.formIdLabel.grid(row=0, column=0, padx=20, pady=20, sticky="w")
 
-    # eventDate input
-    root.eventDateEntry = customtkinter.CTkEntry(root, width=140, placeholder_text="MM/DD/YY")
-    root.eventDateEntry.grid(row=0, column=0, padx=20, pady=20, sticky="e")
+    def combobox_Changed(event):
+        updateEventDateInput(root.formId_comboBox.get(), root)
 
     # form selection combo box
     if currentUser != False:
         values = matcher.getListOfUserForms()
-        root.formId_comboBox = customtkinter.CTkComboBox(root, values=values, width=605, state="readonly")
+        root.formId_comboBox = customtkinter.CTkComboBox(root, values=values, width=250, state="readonly", command=combobox_Changed)
     else:
         root.formId_comboBox = customtkinter.CTkComboBox(root, values=[], width=605, state="readonly")
-    root.formId_comboBox.grid(row=0, column=1, columnspan=2, padx=20, pady=20, sticky="ew")
+    root.formId_comboBox.grid(row=0, column=1, columnspan=1, padx=20, pady=20, sticky="ew")
 
     # results text box
     root.resultsTextBox = customtkinter.CTkTextbox(root, width=920, height=495)
@@ -107,6 +102,8 @@ def createMainWindow():
     root.saveButton.grid(row=4, column=4, padx=20, pady=20, sticky="s")
     root.saveButton.configure(state="disabled")
 
+    root.eventDate_comboBox = customtkinter.CTkComboBox(root, values='', width=8, state="readonly")
+
     root.formId_comboBox.focus()
 
     for child in root.winfo_children():
@@ -115,35 +112,49 @@ def createMainWindow():
     root.mainloop()
 
 # click events
-def processButton_Clicked(arg):
-    # set attributes
-    root = arg
-    comboBox = root.formId_comboBox
-    textbox = root.resultsTextBox
-    statusBox = root.statusInfoTextBox
-    saveButton = root.saveButton
-    eventDateEntry = root.eventDateEntry
+def processButton_Clicked(root):
+    # get form id
+    formid = ""
 
-    # clear textbox
-    updateTextBox(textbox, "")
-
-    # get list of matches with formid
     try:
-        formid = matcher.getFormIdBasedOnFormTitle(comboBox.get())
+        formid = matcher.getFormIdBasedOnFormTitle(root.formId_comboBox.get())
     except:
-        updateStatusBox(statusBox, "No submissions found for that form!")
-    eventDate = eventDateEntry.get()
-    response = matcher.getMatches(formid, eventDate)
+        processErrorMessage("ERROR 103: Form not found", root)
+        return
+    
+    # clear textbox
+    updateTextBox(root.resultsTextBox, "")
 
-    if "ERROR_" in response:
-        updateStatusBox(statusBox, "No submissions found for that Event Date! Confirm your date/format (MM/DD/YY).")
+    # check if form is valid format
+    valid = matcher.checkFormValidity(formid)
+
+    if (valid):
+        updateStatusBox(root.statusInfoTextBox, "Form valid!")
     else:
-        # update textbox and status box
-        updateTextBox(textbox, response[0])
-        updateStatusBox(statusBox, "Matches retrieved!")
+        processErrorMessage("ERROR 102: Invalid form", root)
+        return
 
-        # enable info button
-        saveButton.configure(state="enabled")
+    # check if form has event date, if so then we will order the submissions by the event date, if not then we will continue as is
+    hasDates = matcher.checkIfFormHasEventDate(formid)
+
+    # get response
+    if (hasDates):
+        eventDate = root.eventDate_comboBox.get()
+        response = matcher.getMatches(formid, eventDate)
+    else:
+        response = matcher.getMatches(formid, "")
+
+    # if response string has errors, handle those:
+    if "error" in response[0].casefold():
+        processErrorMessage(response[0], root)
+        return
+    
+    # output response to text box
+    updateTextBox(root.resultsTextBox, response[0])
+    if (response[0] != ""):
+        updateStatusBox(root.statusInfoTextBox, "Matches retrieved!")
+
+    root.saveButton.configure(state="enabled")
 
 def updateButton_Clicked(apikey, label):
     print(apikey)
@@ -152,21 +163,6 @@ def updateButton_Clicked(apikey, label):
         label.configure(text="API Key Updated! Please restart application.")
     else:
         label.configure(text="API Key field cannot be blank!")
-
-# method to display software license
-def licenseButton_Clicked():
-    license = Toplevel(root)
-
-    license.title("LICENSE")
-    appWidth, appHeight = 500, 500
-    license.geometry(f"{appWidth}x{appHeight}")
-
-    license.textBox = customtkinter.CTkTextbox(license, width=460, height=460)
-    license.textBox.grid(row=0, column=0, padx=20, pady=20, sticky="ew")
-
-    f = open("../LICENSE", "r")
-    license.textBox.insert("insert", f.read())
-    license.textBox.configure(state="disabled")
  
 def saveButton_Clicked(arg):
     # set attributes
@@ -185,6 +181,7 @@ def saveButton_Clicked(arg):
 
     outputStr = matcher.getOutputStringForFileSave(checkbox.get(), response, eventDate)
     saveFile(statusBox, outputStr)
+
 
 # helper methods
 def clearTextBox(textbox):
@@ -215,3 +212,36 @@ def saveFile(statusBox, outputStr):
     f.write(outputStr)
     f.close()
     updateStatusBox(statusBox, "Outputted details to file: '{}'.".format(file.name))
+
+def updateEventDateInput(formTitle, root): 
+    # check if form has event date
+    formid = ""
+
+    try:
+        formid = matcher.getFormIdBasedOnFormTitle(formTitle)
+    except:
+        updateStatusBox(root.statusInfoTextBox, "Could not find form with that title.")
+        return
+    
+    hasDates = matcher.checkIfFormHasEventDate(formid)
+
+    if (hasDates):
+        # root.submitButton.configure(state="enabled") # enable submission button
+        eventDates = matcher.getEventDatesFromQuestions(formid)
+        root.eventDate_comboBox.configure(values=eventDates)
+        root.eventDate_comboBox.grid(row=0, column=2, padx=5, pady=5, sticky="ew") # place combo box
+        root.eventDate_comboBox.set(eventDates[0]) # set default value
+    else:
+        # root.submitButton.configure(state="disabled") # disable submission button
+        root.eventDate_comboBox.grid_forget() # hide combo box
+        root.eventDate_comboBox.set("")
+
+def processErrorMessage(error, root):
+    error_code = error.split(":")[0]
+
+    if ("101") in error_code:
+        updateStatusBox(root.statusInfoTextBox, "ERROR: Submission groups are not equal.")
+    elif ("102") in error_code:
+        updateStatusBox(root.statusInfoTextBox, "ERROR: Invalid form, please choose a form with the correct type of inputs (Control Matrix with Agree or Disagree columns).")
+    elif ("103") in error_code:
+        updateStatusBox(root.statusInfoTextBox, "ERROR: Could not find form with that title.")
