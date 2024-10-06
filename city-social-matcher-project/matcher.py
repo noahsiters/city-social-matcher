@@ -166,69 +166,71 @@ def parseDataFromSubmissions(data, dateOfEvent):
         creationDate = sub_json["created_at"]
         eventDate = ""
         
-        for answer in sub_json["answers"]:
+        if sub_json["status"] == "ACTIVE":
 
-            # checks if answer is of type "control_matrix" (table that contains answers)
-            if sub_json["answers"][answer]["type"] == "control_matrix":
-                for key in sub_json["answers"][answer]["answer"]:
-                    resp = sub_json["answers"][answer]["answer"][key]
-                    if resp == "Strongly Disagree":
-                        responses.append(0)
-                        responsesDict[key] =  0
-                    elif resp == "Disagree":
-                        responses.append(1)
-                        responsesDict[key] =  1
-                    elif resp == "Neither":
-                        responses.append(2)
-                        responsesDict[key] =  2
-                    elif resp == "Agree":
-                        responses.append(3)
-                        responsesDict[key] =  3
-                    elif resp == "Strongly Agree":
-                        responses.append(4)
-                        responsesDict[key] =  4
-            # check if answer is personal info
-            elif sub_json["answers"][answer]["name"] == "firstName":
-                firstName = sub_json["answers"][answer]["answer"]
-            elif sub_json["answers"][answer]["name"] == "lastName":
-                lastName = sub_json["answers"][answer]["answer"]
-            elif sub_json["answers"][answer]["name"] == "email":
-                email = sub_json["answers"][answer]["answer"]
-            elif sub_json["answers"][answer]["name"] == "age":
-                age = sub_json["answers"][answer]["answer"]
-            elif sub_json["answers"][answer]["name"] == "gender":
-                try:
-                    gender = sub_json["answers"][answer]["answer"]
-                except:
-                    gender = "NULL"
-            
-        # check if we are ordering by date
-        if dateOfEvent == "":
-            # if no date, then simply add all the submissions to the parsedSubmissions list
-            parsedSubmissions.append(submission.Submission(id, firstName, lastName, email, age, gender, responsesDict, creationDate, ""))
-        else:
-            # if date, then separate each submission into its own date, and return only the submissions that match the date the user entered
             for answer in sub_json["answers"]:
-                if sub_json["answers"][answer]["name"] == "eventDate":
-                    eventDate = sub_json["answers"][answer]["answer"]
 
-            # convert all dates from M/D/YY to MM/DD/YY
-            submissionEventDateArr = eventDate.split("/")
-            adminEventDateArr = dateOfEvent.split("/")
+                # checks if answer is of type "control_matrix" (table that contains answers)
+                if sub_json["answers"][answer]["type"] == "control_matrix":
+                    for key in sub_json["answers"][answer]["answer"]:
+                        resp = sub_json["answers"][answer]["answer"][key]
+                        if resp == "Strongly Disagree":
+                            responses.append(0)
+                            responsesDict[key] =  0
+                        elif resp == "Disagree":
+                            responses.append(1)
+                            responsesDict[key] =  1
+                        elif resp == "Neither":
+                            responses.append(2)
+                            responsesDict[key] =  2
+                        elif resp == "Agree":
+                            responses.append(3)
+                            responsesDict[key] =  3
+                        elif resp == "Strongly Agree":
+                            responses.append(4)
+                            responsesDict[key] =  4
+                # check if answer is personal info
+                elif sub_json["answers"][answer]["name"] == "firstName":
+                    firstName = sub_json["answers"][answer]["answer"]
+                elif sub_json["answers"][answer]["name"] == "lastName":
+                    lastName = sub_json["answers"][answer]["answer"]
+                elif sub_json["answers"][answer]["name"] == "email":
+                    email = sub_json["answers"][answer]["answer"]
+                elif sub_json["answers"][answer]["name"] == "age":
+                    age = sub_json["answers"][answer]["answer"]
+                elif sub_json["answers"][answer]["name"] == "gender":
+                    try:
+                        gender = sub_json["answers"][answer]["answer"]
+                    except:
+                        gender = "NULL"
+                
+            # check if we are ordering by date
+            if dateOfEvent == "":
+                # if no date, then simply add all the submissions to the parsedSubmissions list
+                parsedSubmissions.append(submission.Submission(id, firstName, lastName, email, age, gender, responsesDict, creationDate, ""))
+            else:
+                # if date, then separate each submission into its own date, and return only the submissions that match the date the user entered
+                for answer in sub_json["answers"]:
+                    if sub_json["answers"][answer]["name"] == "eventDate":
+                        eventDate = sub_json["answers"][answer]["answer"]
 
-            if len(submissionEventDateArr[0]) == 1:
-                submissionEventDateArr[0] = "0" + submissionEventDateArr[0]
-            if len(submissionEventDateArr[1]) == 1:
-                submissionEventDateArr[1] = "0" + submissionEventDateArr[1]
+                # convert all dates from M/D/YY to MM/DD/YY
+                submissionEventDateArr = eventDate.split("/")
+                adminEventDateArr = dateOfEvent.split("/")
 
-            # handle admin date
-            if len(adminEventDateArr[0]) == 1:
-                adminEventDateArr[0] = "0" + adminEventDateArr[0]
-            if len(adminEventDateArr[1]) == 1:
-                adminEventDateArr[1] = "0" + adminEventDateArr[1]
+                if len(submissionEventDateArr[0]) == 1:
+                    submissionEventDateArr[0] = "0" + submissionEventDateArr[0]
+                if len(submissionEventDateArr[1]) == 1:
+                    submissionEventDateArr[1] = "0" + submissionEventDateArr[1]
 
-            if str(submissionEventDateArr) == str(adminEventDateArr):
-                parsedSubmissions.append(submission.Submission(id, firstName, lastName, email, age, gender, responsesDict, creationDate, eventDate))
+                # handle admin date
+                if len(adminEventDateArr[0]) == 1:
+                    adminEventDateArr[0] = "0" + adminEventDateArr[0]
+                if len(adminEventDateArr[1]) == 1:
+                    adminEventDateArr[1] = "0" + adminEventDateArr[1]
+
+                if str(submissionEventDateArr) == str(adminEventDateArr):
+                    parsedSubmissions.append(submission.Submission(id, firstName, lastName, email, age, gender, responsesDict, creationDate, eventDate))
 
     return parsedSubmissions
 
